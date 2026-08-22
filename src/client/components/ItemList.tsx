@@ -35,7 +35,7 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
   const currentId = live && (live.phase === 'item' || live.phase === 'results') ? live.itemIds[live.currentIndex] : null;
   const name = (id: number | null) => raiders.find((r) => r.id === id)?.username ?? '?';
 
-  if (bosses.length === 0) return <EmptyState icon={<IconSkull size={28} />} text="No bosses down yet. Loot will appear here as they fall." />;
+  if (bosses.length === 0) return <EmptyState icon={<IconSkull size={28} />} text="No bosses down yet. Go kill something." />;
 
   const canPlan = !!me && !!onPlan && bosses.some((b) => b.items.some((i) => i.resolved_at == null && i.id !== currentId));
 
@@ -43,8 +43,8 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
     <Stack gap="sm">
       {canPlan && (
         <Text size="xs" c="dimmed">
-          <b>Plan ahead:</b> next to each upcoming item, pick what you'd roll. It pre-fills your choice when the item comes up; you can still
-          change it during the countdown.{' '}
+          <b>Decide now, not when everyone's watching.</b> Pre-pick what you'd roll on each upcoming item; it pre-fills when the item comes up
+          and you can still change it during the countdown.{' '}
           <Anchor component={Link} to="/help" size="xs">
             How it works
           </Anchor>

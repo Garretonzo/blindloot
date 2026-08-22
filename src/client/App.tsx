@@ -53,11 +53,11 @@ function Shell() {
               <Group gap={6}>
                 <IconSwords size={20} stroke={2} color="var(--mantine-color-teal-4)" />
                 <Text fw={800} fz="lg" className="brand">
-                  Blind Loot
+                  Just Fucking Roll
                 </Text>
                 {isAdminRoute && (
                   <Text size="xs" c="dimmed" mt={3}>
-                    admin
+                    loot officer
                   </Text>
                 )}
               </Group>

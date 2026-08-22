@@ -37,7 +37,7 @@ export function SiteGate({ children }: { children: ReactNode }) {
   if (ok) return <>{children}</>;
 
   return (
-    <GateCard title="Site password" tagline="blind loot distributor">
+    <GateCard title="Site password" tagline="Blind loot. Zero drama. Just fucking roll.">
         <Stack gap="xs">
           <PasswordInput
             label="Password"
@@ -48,7 +48,7 @@ export function SiteGate({ children }: { children: ReactNode }) {
             autoFocus
           />
           <Text size="xs" c="dimmed">
-            Ask your raid lead for the password. You only need to enter it once per browser.
+            Get the password from your raid lead. You only type it once.
           </Text>
           <Button onClick={submit} loading={busy} disabled={!password}>
             Enter

@@ -1,8 +1,10 @@
-# Blind Loot
+# Just Fucking Roll
 
-Blind loot distributor for guild raids: everyone rolls without seeing anyone else's choice, and
-results show who won but never how — so there's nothing to game and nothing to argue about.
-Minimal WoW raid loot distribution app. React + Mantine front end, Cloudflare Worker back end
+**Blind loot. Zero drama. Just fucking roll.** — justfuckingroll.com
+
+Loot distributor for guild raids: everyone rolls without seeing anyone else's choice, and results
+show who won but never how — so there's nothing to game and nothing to argue about. Minimal WoW
+raid loot distribution app. React + Mantine front end, Cloudflare Worker back end
 (Hono), D1 (SQLite) for persistence, a Durable Object per session for live state, WebSockets
 and countdown timers.
 
@@ -55,7 +57,7 @@ in `src/shared/raids/index.ts` (`RAIDS`) — it then appears in the "New season"
 
 ```sh
 npx wrangler login
-npx wrangler d1 create blindloot     # paste database_id into wrangler.toml (first time only)
+npx wrangler d1 create justfuckingroll     # paste database_id into wrangler.toml (first time only)
 npm run db:migrate                   # apply migrations to the remote DB
 npx wrangler secret put ADMIN_PASSWORD
 npx wrangler secret put SUPER_ADMIN_PASSWORD   # optional; enables deleting seasons/sessions
@@ -63,8 +65,8 @@ npx wrangler secret put SITE_PASSWORD          # what raiders enter before picki
 npm run deploy                       # builds the client and publishes worker + assets + DOs
 ```
 
-The worker is `blindloot`; it uses SQLite-backed Durable Objects, which work on the free plan.
-After the first deploy it is reachable at `https://blindloot.<your-subdomain>.workers.dev`.
+The worker is `justfuckingroll`; it uses SQLite-backed Durable Objects, which work on the free plan.
+After the first deploy it is reachable at `https://justfuckingroll.<your-subdomain>.workers.dev`.
 
 `SITE_PASSWORD` gates the whole raider-facing site (and its API): visitors enter it once per
 browser, before the name picker. Admins bypass it with their own login. Leave it unset to run
@@ -75,7 +77,7 @@ raider-facing pages — admins go to `/admin` directly. A normal admin can creat
 everything; only the super admin can delete seasons and sessions (with all their history).
 
 Custom domain: buy one under **Domain Registration → Register Domains** (or use a subdomain of a
-domain already on the account), then **Workers & Pages → blindloot → Settings → Domains & Routes →
+domain already on the account), then **Workers & Pages → justfuckingroll → Settings → Domains & Routes →
 Add → Custom domain**. Cloudflare creates the DNS record and certificate. Optionally disable the
 `workers.dev` route there so the domain is the only entrance.
 

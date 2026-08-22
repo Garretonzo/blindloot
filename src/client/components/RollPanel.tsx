@@ -76,12 +76,12 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
               className={isReady ? undefined : 'pulse'}
               leftSection={isReady ? <IconCheck size={20} /> : undefined}
             >
-              {isReady ? 'Ready' : "I'm ready"}
+              {isReady ? 'Ready' : "Let's fucking go"}
             </Button>
           )}
           {!me && (
             <Text size="sm" c="dimmed">
-              Waiting for raiders…
+              Waiting on the slow ones…
             </Text>
           )}
         </Stack>
@@ -174,12 +174,12 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
             </SimpleGrid>
           ) : (
             <Text size="sm" c="dimmed">
-              Join the session to roll.
+              Join the session if you want to roll. Spectators don't get loot.
             </Text>
           )}
           {me && (
             <Text size="sm" ta="center" c={mine ? TIER_COLOR[mine] : 'dimmed'} fw={mine ? 600 : 400}>
-              {mine ? `You chose: ${TIER_LABEL[mine]}` : 'You have not rolled yet'}
+              {mine ? `Locked in: ${TIER_LABEL[mine]}` : "You haven't rolled. Tick tock."}
             </Text>
           )}
           {me && (!me.need_available || !canDibs(me)) && (
@@ -216,7 +216,7 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
         ) : (
           <Group justify="center" gap="xs" className="pop" key={res?.itemId ?? 'none'}>
             <IconDice5 size={22} color="var(--mantine-color-dark-2)" />
-            <Text c="dimmed">Nobody rolled. It stays in the bag.</Text>
+            <Text c="dimmed">Nobody rolled. It rots in the bag.</Text>
           </Group>
         )}
         {res && res.entries.length > 0 && (

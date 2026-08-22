@@ -1,8 +1,14 @@
-name = "blindloot"
+name = "justfuckingroll"
 main = "src/worker/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
+
+# Custom domain is attached on deploy (DNS + certificate handled by Cloudflare).
+routes = [
+  { pattern = "justfuckingroll.com", custom_domain = true },
+  { pattern = "www.justfuckingroll.com", custom_domain = true },
+]
 
 [assets]
 directory = "dist/client"
@@ -11,8 +17,8 @@ binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "blindloot"
-database_id = "216f1fce-c594-446f-b740-4c6b37655e58"
+database_name = "justfuckingroll"
+database_id = "8a4ba5d2-1c56-46ad-98b4-0b0fd07735ef"
 migrations_dir = "migrations"
 
 [[durable_objects.bindings]]

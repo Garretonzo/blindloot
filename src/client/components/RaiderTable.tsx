@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function RaiderTable({ raiders, readyIds, meId, editable, bosses = [], onUpdate, onRemove }: Props) {
-  if (raiders.length === 0) return <EmptyState icon={<IconUsers size={26} />} text="Nobody has joined yet." />;
+  if (raiders.length === 0) return <EmptyState icon={<IconUsers size={26} />} text="Nobody here yet." />;
   const ready = new Set(readyIds ?? []);
 
   if (editable) {

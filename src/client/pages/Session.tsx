@@ -87,8 +87,8 @@ export function SessionPage() {
 
       <SectionCard title="Loot">
         <Alert variant="light" color="orange" mb="md">
-          You only get <b>1 Need</b> per week (per difficulty). Winning with a <b>Dibs</b> uses that Need. Winning with a <b>Need</b> means you can't use your
-          Dibs this week. Need and Dibs are only spent when you <b>win</b> with them. Rolling and losing costs nothing.
+          <b>One Need</b> per week (per difficulty). Win with <b>Dibs</b> and it eats your Need. Win with <b>Need</b> and your Dibs is benched for the
+          week. Losing costs nothing, so — just fucking roll.
         </Alert>
         <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} me={me} plans={plans} onPlan={me ? setPlan : undefined} />
       </SectionCard>
@@ -138,7 +138,7 @@ function JoinForm({ sessionId, seasonId, me, onJoined }: { sessionId: number; se
   return (
     <SectionCard title="Join this session">
       <Stack gap="xs">
-        <NumberInput label="Your current item level" value={itemLevel} onChange={setItemLevel} min={0} allowDecimal={false} autoFocus />
+        <NumberInput label="Your item level. Yes, your real one." value={itemLevel} onChange={setItemLevel} min={0} allowDecimal={false} autoFocus />
         {seasonInfo === null && (
           <Text size="xs" c="dimmed">
             First raid night this season. You start with your Dibs.
@@ -150,7 +150,7 @@ function JoinForm({ sessionId, seasonId, me, onJoined }: { sessionId: number; se
           </Text>
         )}
         <Button onClick={submit} loading={busy} disabled={itemLevel === ''}>
-          Join
+          I'm in
         </Button>
       </Stack>
     </SectionCard>

@@ -59,8 +59,8 @@ export function SubHeader({ children, right, icon }: { children: ReactNode; righ
 export function GateCard({ title, tagline, children }: { title: string; tagline?: string; children: ReactNode }) {
   return (
     <div style={{ maxWidth: 380, margin: '6vh auto 0' }}>
-      <Text ta="center" fw={800} fz={34} className="brand" lh={1.1}>
-        Blind Loot
+      <Text ta="center" fw={800} fz={30} className="brand" lh={1.1}>
+        Just Fucking Roll
       </Text>
       {tagline && (
         <Text ta="center" size="sm" c="dimmed" mb="md">

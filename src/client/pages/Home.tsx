@@ -36,7 +36,7 @@ export function Home() {
   };
 
   if (!data) return null;
-  if (data.seasons.length === 0) return <EmptyState icon={<IconMoodEmpty size={26} />} text="No seasons yet. The loot officer hasn't set one up." />;
+  if (data.seasons.length === 0) return <EmptyState icon={<IconMoodEmpty size={26} />} text="No seasons yet. The loot officer is asleep." />;
 
   return (
     <Stack gap="lg">

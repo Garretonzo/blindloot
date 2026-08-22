@@ -73,11 +73,11 @@ export function NamePrompt() {
   };
 
   return (
-    <GateCard title="Who are you?" tagline="blind loot distributor">
+    <GateCard title="Who the hell are you?" tagline="Blind loot. Zero drama. Just fucking roll.">
         <Stack gap="xs">
           <Select
             label="Your name"
-            placeholder={roster.length ? 'Pick your name' : 'No raiders on the roster yet'}
+            placeholder={roster.length ? "Pick your name" : "Roster is empty. Poke the loot officer."}
             data={roster.map((r) => ({
               value: String(r.id),
               label: online.has(r.id) ? `${r.username} (logged in)` : r.username,
@@ -90,11 +90,10 @@ export function NamePrompt() {
             nothingFoundMessage="Not on the roster. Ask an admin to add you"
           />
           <Text size="xs" c="dimmed">
-            Greyed-out names are already logged in somewhere. Closing that tab frees the name after about 30 seconds,
-            or an admin can end the login.
+            Greyed-out names are already logged in somewhere. Close that tab (frees up in ~30 s) or nag the loot officer.
           </Text>
           <Button onClick={submit} loading={busy} disabled={!picked}>
-            Log in
+            That's me
           </Button>
           <Text size="xs" c="dimmed" ta="center">
             <Anchor component={Link} to="/help" size="xs">
