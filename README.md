@@ -116,5 +116,7 @@ Also:
   per tier, change **how** the winner got it (Transmog / Equip / Need / Dibs), **Give** the item
   to a runner-up or anyone else (choosing the tier), or remove the winner. After any such edit the
   affected raiders' Need / Dibs state is recomputed from the items they have actually won, so a
-  Need/Dibs assignment locks them exactly like a rolled win and a removal gives it back.
+  Need/Dibs assignment locks them exactly like a rolled win and a removal gives it back. A
+  runner-up who has *since* won with Need/Dibs is shown demoted (e.g. Need → Equip) and is given
+  the item at that demoted tier; the admin can deliberately override with a confirmation.
 9. Season history (`/admin/seasons/:id/history`) shows every item, winner and roll.

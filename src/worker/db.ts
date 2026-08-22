@@ -230,6 +230,32 @@ export async function upsertRaider(db: D1Database, username: string) {
   return db.prepare('SELECT id, username FROM raiders WHERE username = ?').bind(username).first<{ id: number; username: string }>();
 }
 
+/**
+ * A raider's Need/Dibs eligibility derived from their wins, ignoring one item (the one being
+ * re-awarded). Used to demote runner-ups who have won with Need/Dibs since they rolled.
+ */
+export async function raiderEligibility(
+  db: D1Database,
+  sessionId: number,
+  raiderId: number,
+  excludeItemId: number,
+): Promise<{ needAvailable: boolean; canDibs: boolean }> {
+  const row = await db
+    .prepare(
+      `SELECT
+         NOT EXISTS(SELECT 1 FROM items i JOIN bosses b ON b.id = i.boss_id
+                    WHERE b.session_id = ?1 AND i.winner_raider_id = ?2 AND i.id != ?3 AND i.win_tier IN ('need','dibs')) AS need_available,
+         NOT EXISTS(SELECT 1 FROM items i JOIN bosses b ON b.id = i.boss_id
+                    WHERE b.session_id = ?1 AND i.winner_raider_id = ?2 AND i.id != ?3 AND i.win_tier = 'need') AS not_locked,
+         NOT EXISTS(SELECT 1 FROM items i JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
+                    WHERE s.season_id = (SELECT season_id FROM sessions WHERE id = ?1)
+                      AND i.winner_raider_id = ?2 AND i.id != ?3 AND i.win_tier = 'dibs') AS has_dibs`,
+    )
+    .bind(sessionId, raiderId, excludeItemId)
+    .first<{ need_available: number; not_locked: number; has_dibs: number }>();
+  return { needAvailable: !!row?.need_available, canDibs: !!row?.has_dibs && !!row?.not_locked };
+}
+
 export async function setSessionStatus(db: D1Database, sessionId: number, status: Session['status']) {
   await db.prepare('UPDATE sessions SET status = ? WHERE id = ?').bind(status, sessionId).run();
 }

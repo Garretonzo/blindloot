@@ -56,6 +56,14 @@ export interface Raider {
 /** Can this raider use Dibs on an item in this session right now? */
 export const canDibs = (r: Pick<Raider, 'has_dibs' | 'dibs_locked'>) => r.has_dibs && !r.dibs_locked;
 
+/** Drop a tier to what the raider can still afford: Dibs → Need if no Dibs, Need → Equip if no Need. */
+export function demoteTier(tier: Tier, e: { needAvailable: boolean; canDibs: boolean }): Tier {
+  let t = tier;
+  if (t === 'dibs' && !e.canDibs) t = 'need';
+  if (t === 'need' && !e.needAvailable) t = 'equip';
+  return t;
+}
+
 export interface Item {
   id: number;
   boss_id: number;
@@ -105,6 +113,10 @@ export interface RollEntry {
   roll: number | null;
   itemLevel: number;
   won: boolean;
+  /** Admin rolls view: what this tier would count as today, given what the raider has won since. */
+  effectiveTier?: Tier;
+  /** Admin rolls view: true when effectiveTier is lower than the rolled tier. */
+  ineligible?: boolean;
 }
 
 export interface ItemResult {

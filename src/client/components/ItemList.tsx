@@ -21,7 +21,7 @@ interface Props {
   showTiers?: boolean;
   /** Admin only: recorded rolls per item, enables the runner-up panel. */
   rolls?: Record<number, RollEntry[]>;
-  onAward?: (itemId: number, raiderId: number | null, tier: Tier | null) => void;
+  onAward?: (itemId: number, raiderId: number | null, tier: Tier | null, force?: boolean) => void;
   /** Raider only: the viewer and their planned tiers per item. */
   me?: Raider | null;
   plans?: Record<number, Tier>;
@@ -173,7 +173,7 @@ function AwardDetails({
   item: Item;
   raiders: Raider[];
   entries: RollEntry[];
-  onAward: (itemId: number, raiderId: number | null, tier: Tier | null) => void;
+  onAward: (itemId: number, raiderId: number | null, tier: Tier | null, force?: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [giveTo, setGiveTo] = useState<number | null>(null);
@@ -181,6 +181,21 @@ function AwardDetails({
   const order: Tier[] = ['dibs', 'need', 'equip', 'greed'];
   const others = raiders.filter((r) => !entries.some((e) => e.raiderId === r.id));
   const winner = raiders.find((r) => r.id === item.winner_raider_id) ?? null;
+
+  /**
+   * Award at a Need/Dibs tier only after confirming — the server would otherwise demote it if the
+   * raider has already won with Need/Dibs elsewhere. Confirming sends force=true.
+   */
+  const awardWithCheck = (raiderId: number, t: Tier) => {
+    if (t === 'need' || t === 'dibs') {
+      const ok = confirm(
+        `Give as ${TIER_LABEL[t]}? If they've already won with Need/Dibs this session it normally counts one tier lower. OK = count it as ${TIER_LABEL[t]} regardless, Cancel = let the rules decide.`,
+      );
+      onAward(item.id, raiderId, t, ok);
+      return;
+    }
+    onAward(item.id, raiderId, t);
+  };
 
   const tierRow = (current: Tier | null, onPick: (t: Tier) => void) => (
     <Button.Group>
@@ -215,7 +230,7 @@ function AwardDetails({
                 <Text size="xs" c="dimmed">
                   Winner: <b>{winner.username}</b> · won via
                 </Text>
-                {tierRow(item.win_tier, (t) => t !== item.win_tier && onAward(item.id, winner.id, t))}
+                {tierRow(item.win_tier, (t) => t !== item.win_tier && awardWithCheck(winner.id, t))}
                 <Text size="xs" c="dimmed" mt={2}>
                   Need / Dibs here count exactly like a rolled win.
                 </Text>
@@ -229,20 +244,34 @@ function AwardDetails({
                 <div key={t}>
                   <TierBadge tier={t} />
                   <Stack gap={2} mt={2}>
-                    {ranked[t].map((e, idx) => (
-                      <Group key={e.raiderId} justify="space-between" wrap="nowrap">
-                        <Text size="xs" fw={e.won ? 700 : 400}>
-                          {idx + 1}. {e.username}
-                          {e.roll != null ? ` · ${e.roll}` : ''}
-                          {t === 'dibs' ? ` · ilvl ${e.itemLevel}` : ''}
-                        </Text>
-                        {item.winner_raider_id !== e.raiderId && (
-                          <Button size="compact-xs" variant="default" onClick={() => onAward(item.id, e.raiderId, t)}>
-                            Give
-                          </Button>
-                        )}
-                      </Group>
-                    ))}
+                    {ranked[t].map((e, idx) => {
+                      const effective = e.effectiveTier ?? t;
+                      const demoted = !!e.ineligible && effective !== t;
+                      return (
+                        <Group key={e.raiderId} justify="space-between" wrap="nowrap">
+                          <Group gap={6} wrap="nowrap">
+                            <Text size="xs" fw={e.won ? 700 : 400} c={demoted ? 'dimmed' : undefined} td={demoted ? 'line-through' : undefined}>
+                              {idx + 1}. {e.username}
+                              {e.roll != null ? ` · ${e.roll}` : ''}
+                              {t === 'dibs' ? ` · ilvl ${e.itemLevel}` : ''}
+                            </Text>
+                            {demoted && (
+                              <Group gap={4} wrap="nowrap" title={`Has won with Need/Dibs since this roll — now counts as ${TIER_LABEL[effective]}`}>
+                                <Text size="xs" c="yellow.4">
+                                  → now
+                                </Text>
+                                <TierBadge tier={effective} />
+                              </Group>
+                            )}
+                          </Group>
+                          {item.winner_raider_id !== e.raiderId && (
+                            <Button size="compact-xs" variant="default" onClick={() => onAward(item.id, e.raiderId, effective)} title={`Give as ${TIER_LABEL[effective]}`}>
+                              Give
+                            </Button>
+                          )}
+                        </Group>
+                      );
+                    })}
                   </Stack>
                 </div>
               ),
@@ -277,7 +306,7 @@ function AwardDetails({
                       as
                     </Text>
                     {tierRow(null, (t) => {
-                      onAward(item.id, giveTo, t);
+                      awardWithCheck(giveTo, t);
                       setGiveTo(null);
                     })}
                   </Group>

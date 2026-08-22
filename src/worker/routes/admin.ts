@@ -2,8 +2,8 @@ import { Hono } from 'hono';
 import { Env } from '../env';
 import { clearAdminCookie, getRole, requireAdmin, requireSuper, roleForPassword, setAdminCookie } from '../auth';
 import { clearSession, notifySession, presenceStub, sessionStub } from '../session';
-import { getSessionRolls, joinSession, LAST_ILVL_SQL, recomputeRaiderResources, setItemLevelStatements, upsertRaider } from '../db';
-import { Tier } from '../../shared/types';
+import { getSessionRolls, joinSession, LAST_ILVL_SQL, raiderEligibility, recomputeRaiderResources, setItemLevelStatements, upsertRaider } from '../db';
+import { demoteTier, Tier } from '../../shared/types';
 import { raidById } from '../../shared/raids';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
@@ -187,17 +187,44 @@ adminRoutes.delete('/sessions/:id/items/:itemId', async (c) => {
 });
 
 adminRoutes.get('/sessions/:id/rolls', async (c) => {
-  return c.json(await getSessionRolls(c.env.DB, Number(c.req.param('id'))));
+  const sessionId = Number(c.req.param('id'));
+  const rolls = await getSessionRolls(c.env.DB, sessionId);
+  // Annotate each roll with what it would count as today (runner-ups may have won Need/Dibs since).
+  const cache = new Map<string, { needAvailable: boolean; canDibs: boolean }>();
+  for (const [itemIdStr, entries] of Object.entries(rolls)) {
+    const itemId = Number(itemIdStr);
+    for (const e of entries) {
+      if (!e.tier || e.tier === 'greed' || e.tier === 'equip') {
+        e.effectiveTier = e.tier;
+        e.ineligible = false;
+        continue;
+      }
+      const key = `${itemId}:${e.raiderId}`;
+      let el = cache.get(key);
+      if (!el) {
+        el = await raiderEligibility(c.env.DB, sessionId, e.raiderId, itemId);
+        cache.set(key, el);
+      }
+      e.effectiveTier = demoteTier(e.tier, el);
+      e.ineligible = e.effectiveTier !== e.tier;
+    }
+  }
+  return c.json(rolls);
 });
 
 /** Manually (re)assign an item's winner, e.g. when the winner gives it away. */
 adminRoutes.post('/sessions/:id/items/:itemId/award', async (c) => {
   const sessionId = Number(c.req.param('id'));
   const itemId = Number(c.req.param('itemId'));
-  const body = await c.req.json<{ raiderId?: number | null; tier?: Tier | null }>();
+  const body = await c.req.json<{ raiderId?: number | null; tier?: Tier | null; force?: boolean }>();
   const raiderId = body.raiderId ?? null;
-  const tier = raiderId != null ? body.tier ?? 'greed' : null;
+  let tier: Tier | null = raiderId != null ? body.tier ?? 'greed' : null;
   const db = c.env.DB;
+  // Unless the admin explicitly forces it, a Need/Dibs award is demoted if the raider has
+  // already won with Need/Dibs elsewhere (ignoring this item, whose winner is being replaced).
+  if (raiderId != null && tier && !body.force) {
+    tier = demoteTier(tier, await raiderEligibility(db, sessionId, raiderId, itemId));
+  }
 
   const item = await db
     .prepare('SELECT i.resolved_at, i.winner_raider_id, i.win_tier FROM items i JOIN bosses b ON b.id = i.boss_id WHERE i.id = ? AND b.session_id = ?')
@@ -219,7 +246,7 @@ adminRoutes.post('/sessions/:id/items/:itemId/award', async (c) => {
   for (const id of affected) stmts.push(...recomputeRaiderResources(db, sessionId, id));
   await db.batch(stmts);
   await notifySession(c.env, sessionId);
-  return c.json({ ok: true });
+  return c.json({ ok: true, tier });
 });
 
 adminRoutes.delete('/sessions/:id/bosses/:bossId', async (c) => {

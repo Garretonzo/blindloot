@@ -64,14 +64,18 @@ export class PresenceDO extends DurableObject<Env> {
       case '/online':
         return Response.json(this.snapshot());
       case '/ws': {
+        // Credentials decide, not the admin cookie: a loot officer who is also a raider has both,
+        // and their raider tab must count as "connected" or the login would expire under them.
         const admin = request.headers.get('X-Admin') === '1';
+        const l = raiderId ? this.logins[raiderId] : undefined;
+        const validRaider = !!l && l.token === token && this.isActive(l);
         let att: Attachment = { raiderId: null };
-        if (!admin) {
-          const l = raiderId ? this.logins[raiderId] : undefined;
-          if (!l || l.token !== token || !this.isActive(l)) return new Response('not logged in', { status: 401 });
+        if (validRaider) {
           att = { raiderId };
           l.graceUntil = null; // connected
           await this.persist();
+        } else if (!admin) {
+          return new Response('not logged in', { status: 401 });
         }
         const pair = new WebSocketPair();
         this.ctx.acceptWebSocket(pair[1]);

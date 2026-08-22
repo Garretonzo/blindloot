@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
-import { api, Identity, LOGIN_LOST_EVENT } from './api';
+import { api, Identity, loadIdentity, LOGIN_LOST_EVENT } from './api';
 
 /**
  * Keeps a socket open to the presence service while logged in (that's what "logged in" means
@@ -44,7 +44,12 @@ export function usePresence(identity: Identity | null, onEnded: (reason: string)
         if (!opened && identity) {
           const { ok } = await api.checkLogin(identity).catch(() => ({ ok: true })); // network issue → keep trying
           if (closed) return;
-          if (!ok) return onEndedRef.current('Your login expired. Please pick your name again.');
+          if (!ok) {
+            // Another tab may have logged in again with a fresh token; don't wipe that.
+            const stored = loadIdentity();
+            if (stored && stored.raiderId === identity.raiderId && stored.token !== identity.token) return onEndedRef.current('Reconnected as the newer login in your other tab.');
+            return onEndedRef.current('Your login expired. Please pick your name again.');
+          }
         }
         attempt += 1;
         timer = window.setTimeout(connect, Math.min(10_000, 500 * 2 ** attempt));

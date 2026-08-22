@@ -5,7 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, RosterRaider } from '../api';
-import { RollEntry, SessionDetail } from '../../shared/types';
+import { RollEntry, SessionDetail, TIER_LABEL } from '../../shared/types';
 import { useSessionSocket } from '../useSessionSocket';
 import { useRequireAdmin } from './Admin';
 import { ItemList } from '../components/ItemList';
@@ -223,7 +223,13 @@ export function AdminSessionPage() {
           raidId={detail.season.raid_id}
           showTiers
           rolls={rolls}
-          onAward={(itemId, raiderId, tier) => run(api.admin.award(sessionId, itemId, raiderId, tier))}
+          onAward={(itemId, raiderId, tier, force) =>
+            run(
+              api.admin.award(sessionId, itemId, raiderId, tier, force).then((r) => {
+                if (tier && r.tier !== tier) notifications.show({ color: 'yellow', message: `Counted as ${TIER_LABEL[r.tier ?? 'greed']} — they had already won with Need/Dibs.` });
+              }),
+            )
+          }
           onAddItem={editable ? (bossId, name, icon) => run(api.admin.addItem(sessionId, bossId, name, icon)) as Promise<void> : undefined}
           onDeleteItem={editable ? (id) => run(api.admin.deleteItem(sessionId, id)) : undefined}
           onDeleteBoss={editable ? (id) => confirm('Remove this boss and its items?') && run(api.admin.deleteBoss(sessionId, id)) : undefined}

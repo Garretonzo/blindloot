@@ -10,7 +10,7 @@ export function HelpPage() {
     <Stack gap="lg">
       <Title order={3}>How it works</Title>
 
-      <SectionCard title="Why “blind”?">
+      {/* <SectionCard title="Why “blind”?">
         <Text size="sm" mb="xs">
           Loot drama comes from people gaming the system and playing the other raiders (or playing yourselves, congratulations) instead of rolling honestly: waiting to see who else Needs, hovering over
           the button until the last second, saving a Need all night for a drop that never comes, or spending it early on trash and
@@ -33,7 +33,7 @@ export function HelpPage() {
         <Text size="sm" c="dimmed" mt="xs">
           Roll what the item is honestly worth to you. That's the whole point of the system.
         </Text>
-      </SectionCard>
+      </SectionCard> */}
 
       <SectionCard title="Roll types">
         <Text size="sm" c="dimmed" mb="sm">
