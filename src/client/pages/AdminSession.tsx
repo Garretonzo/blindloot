@@ -12,6 +12,7 @@ import { ItemList } from '../components/ItemList';
 import { RaiderTable } from '../components/RaiderTable';
 import { RollPanel } from '../components/RollPanel';
 import { BossForm } from '../components/BossForm';
+import { BatchResults } from '../components/BatchResults';
 
 /** Add a raider from the site-wide roster to this session, with this session's item level. */
 function AddRaiderRow({ inSession, onAdd }: { inSession: number[]; onAdd: (raiderId: number, itemLevel: number) => Promise<unknown> }) {
@@ -68,11 +69,13 @@ export function AdminSessionPage() {
   const sessionId = Number(useParams().sessionId);
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [rolls, setRolls] = useState<Record<number, RollEntry[]>>({});
+  const [picks, setPicks] = useState<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number } | null>(null);
   const { state: live, connected, send } = useSessionSocket(sessionId, null);
 
   const refresh = useCallback(() => {
     api.session(sessionId).then(setDetail).catch(() => setDetail(null));
     api.admin.rolls(sessionId).then(setRolls).catch(() => {});
+    api.admin.plansSummary(sessionId).then(setPicks).catch(() => {});
   }, [sessionId]);
   useEffect(() => {
     if (ok) refresh();
@@ -125,6 +128,23 @@ export function AdminSessionPage() {
               <Button onClick={() => send({ type: 'stage' })} disabled={detail.raiders.length === 0 || pendingCount === 0}>
                 Stage rolling (ready check)
               </Button>
+              <Button
+                variant="light"
+                color="grape"
+                disabled={pendingCount === 0}
+                onClick={() => {
+                  const withPicks = picks?.raiders.length ?? 0;
+                  if (
+                    confirm(
+                      `Resolve all ${pendingCount} unrolled item${pendingCount === 1 ? '' : 's'} right now from pre-picks? No countdowns.\n\n` +
+                        `${withPicks} of ${detail.raiders.length} raiders have pre-picks${live?.shuffle ? '. Order will be randomized.' : '.'}`,
+                    )
+                  )
+                    send({ type: 'runBatch' });
+                }}
+              >
+                Run instant batch
+              </Button>
               <Button variant="default" onClick={() => confirm('Close this session? Raiders can no longer join.') && send({ type: 'close' })}>
                 Close session
               </Button>
@@ -156,13 +176,30 @@ export function AdminSessionPage() {
           )}
         </Group>
         {(phase === 'ready' || phase === 'open') && (
-          <Checkbox
-            mt="sm"
-            size="xs"
-            label="Auto-continue (untick to stop after every item until you press Start next item)"
-            checked={live?.autoContinue ?? false}
-            onChange={(e) => send({ type: 'setAutoContinue', value: e.currentTarget.checked })}
-          />
+          <Stack gap={6} mt="sm">
+            <Checkbox
+              size="xs"
+              label="Auto-continue (untick to stop after every item until you press Start next item)"
+              checked={live?.autoContinue ?? false}
+              onChange={(e) => send({ type: 'setAutoContinue', value: e.currentTarget.checked })}
+            />
+            <Checkbox
+              size="xs"
+              label="Randomize item order (live roll-off and instant batch)"
+              checked={live?.shuffle ?? false}
+              onChange={(e) => send({ type: 'setShuffle', value: e.currentTarget.checked })}
+            />
+            {phase === 'open' && picks && pendingCount > 0 && (
+              <Text size="xs" c="dimmed">
+                Pre-picks: {picks.raiders.length} of {detail.raiders.length} raiders have set some
+                {picks.raiders.length > 0 &&
+                  ` (${picks.raiders
+                    .map((p) => `${detail.raiders.find((r) => r.id === p.raiderId)?.username ?? '?'} ${p.picks}/${picks.unresolvedItems}`)
+                    .join(', ')})`}
+                .
+              </Text>
+            )}
+          </Stack>
         )}
         {phase !== 'closed' && live && (
           <Group mt="sm" gap="md" align="flex-end">
@@ -197,6 +234,8 @@ export function AdminSessionPage() {
           </Text>
         )}
       </SectionCard>
+
+      {live?.batchResults && phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} />}
 
       {live && (
         <RollPanel

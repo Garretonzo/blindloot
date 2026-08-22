@@ -63,6 +63,8 @@ export const api = {
     deleteItem: (sessionId: number, itemId: number) =>
       req('DELETE', `/api/admin/sessions/${sessionId}/items/${itemId}`),
     rolls: (sessionId: number) => req<Record<number, RollEntry[]>>('GET', `/api/admin/sessions/${sessionId}/rolls`),
+    plansSummary: (sessionId: number) =>
+      req<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number }>('GET', `/api/admin/sessions/${sessionId}/plans-summary`),
     award: (sessionId: number, itemId: number, raiderId: number | null, tier: Tier | null, force = false) =>
       req<{ ok: true; tier: Tier | null }>('POST', `/api/admin/sessions/${sessionId}/items/${itemId}/award`, { raiderId, tier, force }),
     deleteBoss: (sessionId: number, bossId: number) =>

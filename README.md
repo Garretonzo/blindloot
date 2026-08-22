@@ -110,6 +110,10 @@ Add → Custom domain**. Cloudflare creates the DNS record and certificate. Opti
 7. When every pending item is rolled the session goes back to *open*: add more bosses/items
    (e.g. the next raid night) and stage another roll-off — only unrolled items are included.
 8. **Close session** when the raid is fully done (no more joins/edits); **Reopen** if needed.
+9. Two options in the Controls card: **Randomize item order** (applies to the live roll-off and to
+   batches), and **Run instant batch** — resolves every unrolled item immediately from raiders'
+   pre-picks (same rules and demotion between items, no countdowns) and shows the results to
+   everyone; raiders only see who won, the admin also sees tiers and rolls.
 
 Also:
 - `/help` ("How it works", linked from the header and the name picker) explains the roll types,

@@ -140,6 +140,14 @@ export function HelpPage() {
               anyone else's Need/Dibs status.
             </Accordion.Panel>
           </Accordion.Item>
+          <Accordion.Item value="batch">
+            <Accordion.Control>What's an “instant batch”?</Accordion.Control>
+            <Accordion.Panel>
+              Instead of a live countdown per item, the loot officer can resolve everything at once from your pre-picks — same rules, same
+              dice, same Need/Dibs demotion between items, just no waiting. If you haven't pre-picked an item, you're not rolling on it. So
+              set your picks.
+            </Accordion.Panel>
+          </Accordion.Item>
           <Accordion.Item value="give">
             <Accordion.Control>I won something I don't actually want.</Accordion.Control>
             <Accordion.Panel>

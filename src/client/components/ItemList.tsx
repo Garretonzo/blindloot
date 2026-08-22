@@ -34,6 +34,9 @@ interface Props {
 export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAward, me, plans, onPlan, onAddItem, onDeleteItem, onDeleteBoss }: Props) {
   const currentId = live && (live.phase === 'item' || live.phase === 'results') ? live.itemIds[live.currentIndex] : null;
   const name = (id: number | null) => raiders.find((r) => r.id === id)?.username ?? '?';
+  // During a shuffled live roll-off the roll order differs from the list order: show "#n".
+  const rollOrder = new Map<number, number>();
+  if (live && live.shuffle && currentId != null) live.itemIds.forEach((id, idx) => rollOrder.set(id, idx + 1));
 
   if (bosses.length === 0) return <EmptyState icon={<IconSkull size={28} />} text="No bosses down yet. Go kill something." />;
 
@@ -94,6 +97,11 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
                       {isCurrent && (
                         <Badge size="xs" variant="dot" color="teal" className="blink">
                           now
+                        </Badge>
+                      )}
+                      {!isCurrent && !resolved && rollOrder.has(i.id) && (
+                        <Badge size="xs" variant="outline" color="gray" title="Roll order (randomized)">
+                          #{rollOrder.get(i.id)}
                         </Badge>
                       )}
                     </Group>

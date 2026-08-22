@@ -186,6 +186,24 @@ adminRoutes.delete('/sessions/:id/items/:itemId', async (c) => {
   return c.json({ ok: true });
 });
 
+/** Who has pre-picked how many unresolved items — shown before running an instant batch. */
+adminRoutes.get('/sessions/:id/plans-summary', async (c) => {
+  const sessionId = Number(c.req.param('id'));
+  const db = c.env.DB;
+  const picks = await db
+    .prepare(
+      `SELECT p.raider_id, COUNT(*) AS n FROM plans p JOIN items i ON i.id = p.item_id
+       WHERE p.session_id = ? AND i.resolved_at IS NULL GROUP BY p.raider_id`,
+    )
+    .bind(sessionId)
+    .all<{ raider_id: number; n: number }>();
+  const unresolved = await db
+    .prepare('SELECT COUNT(*) AS n FROM items i JOIN bosses b ON b.id = i.boss_id WHERE b.session_id = ? AND i.resolved_at IS NULL')
+    .bind(sessionId)
+    .first<{ n: number }>();
+  return c.json({ raiders: picks.results.map((r) => ({ raiderId: r.raider_id, picks: r.n })), unresolvedItems: unresolved?.n ?? 0 });
+});
+
 adminRoutes.get('/sessions/:id/rolls', async (c) => {
   const sessionId = Number(c.req.param('id'));
   const rolls = await getSessionRolls(c.env.DB, sessionId);

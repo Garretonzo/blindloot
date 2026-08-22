@@ -152,6 +152,10 @@ export interface LiveState {
   /** Number of raiders who have chosen on the current item. */
   choiceCount: number;
   lastResult: ItemResult | null;
+  /** Randomize item order for the next live roll-off or batch. */
+  shuffle: boolean;
+  /** Results of the last instant batch (replaced by the next one; cleared when a live roll-off starts). */
+  batchResults: ItemResult[] | null;
   /** bump to tell clients to refetch session detail */
   revision: number;
 }
@@ -166,6 +170,8 @@ export type ClientMessage =
   | { type: 'resume' }
   | { type: 'setAutoContinue'; value: boolean }
   | { type: 'setTimers'; itemSeconds?: number; resultSeconds?: number }
+  | { type: 'setShuffle'; value: boolean }
+  | { type: 'runBatch' }
   | { type: 'close' }
   | { type: 'reopen' }
   | { type: 'reset' };

@@ -10,6 +10,7 @@ import { useSessionSocket } from '../useSessionSocket';
 import { ItemList } from '../components/ItemList';
 import { RaiderTable } from '../components/RaiderTable';
 import { RollPanel } from '../components/RollPanel';
+import { BatchResults } from '../components/BatchResults';
 
 export function SessionPage() {
   const sessionId = Number(useParams().sessionId);
@@ -78,6 +79,8 @@ export function SessionPage() {
         </Text>
       )}
 
+      {live?.batchResults && live.phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} />}
+
       {live && (
         <RollPanel
           live={live}
@@ -94,6 +97,11 @@ export function SessionPage() {
           <b>One Need</b> per week (per difficulty). Win with <b>Dibs</b> and it eats your Need. Win with <b>Need</b> and your Dibs is benched for the
           week. Losing costs nothing, so — just fucking roll.
         </Alert>
+        {me && detail.session.status === 'open' && unresolved.size > 0 && (
+          <Text size="xs" c="dimmed" mb="sm">
+            Heads up: the loot officer may run an <b>instant batch</b> straight from pre-picks — no countdown, no second chance. Set yours.
+          </Text>
+        )}
         {me && bigPlans.length > 1 && (
           <Alert variant="light" color="red" mb="md" title={`You're pre-picking Need/Dibs on ${bigPlans.length} items`}>
             You only get one big win. The moment you <b>win</b> one with Need or Dibs, every other Need/Dibs you've pre-picked drops to{' '}

@@ -30,6 +30,8 @@ const initialState = (): LiveState => ({
   choices: {},
   choiceCount: 0,
   lastResult: null,
+  shuffle: false,
+  batchResults: null,
   revision: 0,
 });
 
@@ -153,6 +155,12 @@ export class SessionDO extends DurableObject<Env> {
             });
           }
           break;
+        case 'setShuffle':
+          if (att.admin) await this.save({ shuffle: !!msg.value });
+          break;
+        case 'runBatch':
+          if (att.admin) await this.runBatch();
+          break;
         case 'close':
           if (att.admin) await this.close();
           break;
@@ -208,9 +216,22 @@ export class SessionDO extends DurableObject<Env> {
     if (raiders.length > 0 && raiders.every((r) => ready.has(r.id))) await this.start();
   }
 
+  /** Unrolled items in roll order — list order, or a random permutation when shuffle is on. */
+  private async orderedPending(): Promise<number[]> {
+    const ids = await getPendingItemIds(this.env.DB, this.sessionId);
+    if (!this.state.shuffle) return ids;
+    const rnd = new Uint32Array(ids.length);
+    crypto.getRandomValues(rnd);
+    for (let i = ids.length - 1; i > 0; i--) {
+      const j = rnd[i] % (i + 1);
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+    }
+    return ids;
+  }
+
   private async start() {
     if (this.state.phase !== 'open' && this.state.phase !== 'ready') return;
-    const itemIds = await getPendingItemIds(this.env.DB, this.sessionId);
+    const itemIds = await this.orderedPending();
     if (itemIds.length === 0) throw new Error('No items to roll on');
     await setSessionStatus(this.env.DB, this.sessionId, 'rolling');
     const choices = await this.prefilledChoices(itemIds[0]);
@@ -221,10 +242,27 @@ export class SessionDO extends DurableObject<Env> {
       choices,
       choiceCount: Object.keys(choices).length,
       lastResult: null,
+      batchResults: null,
       revision: this.state.revision + 1,
       // First item waits for the admin to press "Start countdown".
       ...(await this.pausedTimer(this.itemMs())),
     });
+  }
+
+  /**
+   * Instant batch: resolve every unrolled item right now from raiders' pre-picks, in order,
+   * with Need/Dibs demotion applied between items exactly as in a live roll-off.
+   */
+  private async runBatch() {
+    if (this.state.phase !== 'open') throw new Error('Finish or reset the live roll-off first');
+    const itemIds = await this.orderedPending();
+    if (itemIds.length === 0) throw new Error('No unrolled items');
+    const results: ItemResult[] = [];
+    for (const itemId of itemIds) {
+      const choices = await this.prefilledChoices(itemId); // re-read each time: earlier wins change eligibility
+      results.push(await this.resolveOne(itemId, choices));
+    }
+    await this.save({ batchResults: results, lastResult: null, revision: this.state.revision + 1 });
   }
 
   private itemMs() {
@@ -267,12 +305,24 @@ export class SessionDO extends DurableObject<Env> {
   }
 
   private async resolveCurrent() {
-    const itemId = this.state.itemIds[this.state.currentIndex];
+    const lastResult = await this.resolveOne(this.state.itemIds[this.state.currentIndex], this.state.choices);
+    await this.save({
+      phase: 'results',
+      lastResult,
+      choices: {},
+      choiceCount: 0,
+      revision: this.state.revision + 1,
+      ...(await this.armTimer(this.resultMs())),
+    });
+  }
+
+  /** Roll one item for the given choices, persist the outcome, and describe it. */
+  private async resolveOne(itemId: number, choices: Record<number, Tier>): Promise<ItemResult> {
     const item = await getItemWithBoss(this.env.DB, itemId);
     const raiders = await getSessionRaiders(this.env.DB, this.sessionId);
 
     const participants: Participant[] = [];
-    for (const [idStr, tier] of Object.entries(this.state.choices)) {
+    for (const [idStr, tier] of Object.entries(choices)) {
       const r = raiders.find((x) => x.id === Number(idStr));
       if (!r) continue;
       // Re-validate eligibility at resolution time.
@@ -290,7 +340,7 @@ export class SessionDO extends DurableObject<Env> {
       entries: res.entries.map((e) => ({ raiderId: e.raiderId, tier: e.tier!, roll: e.roll, won: e.won })),
     });
 
-    const lastResult: ItemResult = {
+    return {
       itemId,
       itemName: item?.name ?? '?',
       bossName: item?.boss_name ?? '?',
@@ -299,15 +349,6 @@ export class SessionDO extends DurableObject<Env> {
       winTier: res.winTier,
       entries: res.entries,
     };
-
-    await this.save({
-      phase: 'results',
-      lastResult,
-      choices: {},
-      choiceCount: 0,
-      revision: this.state.revision + 1,
-      ...(await this.armTimer(this.resultMs())),
-    });
   }
 
   private async advance() {
@@ -365,6 +406,8 @@ export class SessionDO extends DurableObject<Env> {
       autoContinue: this.state.autoContinue,
       itemSeconds: this.state.itemSeconds,
       resultSeconds: this.state.resultSeconds,
+      shuffle: this.state.shuffle,
+      batchResults: this.state.batchResults,
       revision: this.state.revision + 1,
     });
   }
@@ -398,16 +441,16 @@ export class SessionDO extends DurableObject<Env> {
     const s = this.state;
     const own: Record<number, Tier> = {};
     if (att.raiderId != null && s.choices[att.raiderId]) own[att.raiderId] = s.choices[att.raiderId];
+    const blind = (r: ItemResult): ItemResult => ({
+      ...r,
+      winTier: null,
+      entries: r.entries.map(({ tier: _tier, itemLevel: _ilvl, ...rest }) => ({ ...rest, itemLevel: 0 })),
+    });
     return {
       ...s,
       choices: own,
-      lastResult: s.lastResult
-        ? {
-            ...s.lastResult,
-            winTier: null,
-            entries: s.lastResult.entries.map(({ tier: _tier, itemLevel: _ilvl, ...rest }) => ({ ...rest, itemLevel: 0 })),
-          }
-        : null,
+      lastResult: s.lastResult ? blind(s.lastResult) : null,
+      batchResults: s.batchResults ? s.batchResults.map(blind) : null,
     };
   }
 
