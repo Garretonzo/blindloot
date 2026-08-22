@@ -83,16 +83,24 @@ export function HelpPage() {
       <SectionCard title="Raid night, step by step">
         <List type="ordered" size="sm" spacing="xs">
           <List.Item>
-            <b>In game, everyone passes on everything.</b> The loot officer picks it all up. Nothing gets rolled in the game client.
+            <b>Boss dies. Everyone passes on everything.</b> The loot officer picks it all up. Nothing gets rolled in the game client.
           </List.Item>
           <List.Item>
-            Open the session here and enter your item level. Your real one... it's shown to everyone btw, and it decides Dibs ties. (The loot
-            officer can also add you or fix it.)
+            <b>Start clearing trash. Immediately.</b> Move to the next boss. Loot is a problem for after the raid. That is the entire
+            point of this site. Nobody stands around discussing drops.
           </List.Item>
-          <List.Item>As bosses die, the loot officer adds them and what dropped. The list updates live.</List.Item>
           <List.Item>
-            <b>As loot shows up, pre-pick your roll on every item you want.</b> This is not optional. This is the roll. Nobody sees your picks,
-            you can change them until the item is resolved, and when the batch runs, no pick means no roll.
+            Meanwhile the loot officer logs each boss and what dropped here, between pulls. The list updates live, so if you want to glance
+            at it during a break, go ahead. But the raid does not wait for it.
+          </List.Item>
+          <List.Item>
+            <b>After the raid</b>, open the session and enter your item level. Your real one... it's shown to everyone btw, and it decides
+            Dibs ties. (The loot officer can also add you or fix it.)
+          </List.Item>
+          <List.Item>
+            <b>Pre-pick your roll on every item you want.</b> This is not optional. This is the roll. Nobody sees your picks, you can change
+            them until the item is resolved, and when the batch runs, no pick means no roll. You can set these during the raid if you've got
+            a spare moment, but the expectation is: kill things now, roll later.
           </List.Item>
           <List.Item>
             Happy with your picks? Flip the <b>YES</b> switch under the Loot card so the officer knows. It resets whenever loot is added.
