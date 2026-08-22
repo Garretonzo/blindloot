@@ -44,6 +44,10 @@ export function SessionPage() {
 
   if (!detail) return <Text c="dimmed">Loading…</Text>;
 
+  // Unresolved items the viewer has pre-picked Need or Dibs on.
+  const unresolved = new Set(detail.bosses.flatMap((b) => b.items).filter((i) => i.resolved_at == null).map((i) => i.id));
+  const bigPlans = Object.entries(plans).filter(([id, tier]) => unresolved.has(Number(id)) && (tier === 'need' || tier === 'dibs'));
+
   return (
     <Stack gap="lg">
       <Group justify="space-between">
@@ -90,6 +94,12 @@ export function SessionPage() {
           <b>One Need</b> per week (per difficulty). Win with <b>Dibs</b> and it eats your Need. Win with <b>Need</b> and your Dibs is benched for the
           week. Losing costs nothing, so — just fucking roll.
         </Alert>
+        {me && bigPlans.length > 1 && (
+          <Alert variant="light" color="red" mb="md" title={`You're pre-picking Need/Dibs on ${bigPlans.length} items`}>
+            You only get one big win. The moment you <b>win</b> one with Need or Dibs, every other Need/Dibs you've pre-picked drops to{' '}
+            <b>Equip</b> automatically. Pre-picking several is fine — it just means "whichever comes first".
+          </Alert>
+        )}
         <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} me={me} plans={plans} onPlan={me ? setPlan : undefined} />
       </SectionCard>
 
