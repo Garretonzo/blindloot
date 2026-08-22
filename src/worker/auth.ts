@@ -55,6 +55,37 @@ export function clearAdminCookie(c: Context<{ Bindings: Env }>) {
   setCookie(c, COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 });
 }
 
+// ---- site password: everyone (raiders) must enter it once; admins are let through ----
+const SITE_COOKIE = 'loot_site';
+
+async function siteToken(env: Env): Promise<string> {
+  return hmac(env.ADMIN_PASSWORD, `site-v1:${env.SITE_PASSWORD ?? ''}`);
+}
+
+/** Site gate is active only when SITE_PASSWORD is configured. */
+export const siteGateEnabled = (env: Env) => !!env.SITE_PASSWORD;
+
+export async function hasSiteAccess(c: Context<{ Bindings: Env }>): Promise<boolean> {
+  if (!siteGateEnabled(c.env)) return true;
+  if (await isAdmin(c)) return true;
+  const cookie = getCookie(c, SITE_COOKIE);
+  return !!cookie && cookie === (await siteToken(c.env));
+}
+
+export async function setSiteCookie(c: Context<{ Bindings: Env }>) {
+  setCookie(c, SITE_COOKIE, await siteToken(c.env), {
+    httpOnly: true,
+    sameSite: 'Lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
+export const requireSite: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+  if (!(await hasSiteAccess(c))) return c.json({ error: 'site password required' }, 403);
+  await next();
+};
+
 export const requireAdmin: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
   if (!(await isAdmin(c))) return c.json({ error: 'unauthorized' }, 401);
   await next();

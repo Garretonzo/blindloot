@@ -1,6 +1,6 @@
 import { Badge, Button, Checkbox, Group, Progress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
 import { SectionCard } from './SectionCard';
-import { Boss, canDibs, LiveState, Raider, Tier, TIER_COLOR, TIER_LABEL } from '../../shared/types';
+import { Boss, canDibs, LiveState, Raider, Tier, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
 import { TierBadge } from './TierBadge';
 import { Icon } from './Icon';
 import { useCountdown } from '../useSessionSocket';
@@ -143,6 +143,7 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
                     color={TIER_COLOR[t]}
                     variant={selected ? 'filled' : 'outline'}
                     disabled={disabled}
+                    title={TIER_HINT[t]}
                     onClick={() => onChoose(selected ? null : t)}
                     style={selected ? { boxShadow: '0 0 0 3px var(--mantine-color-yellow-5)' } : undefined}
                   >

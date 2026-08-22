@@ -1,2 +1,4 @@
 ADMIN_PASSWORD=changeme
 SUPER_ADMIN_PASSWORD=changeme-super
+# Everyone must enter this before picking their name. Leave unset to disable the gate.
+SITE_PASSWORD=raidpass

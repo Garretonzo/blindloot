@@ -1,11 +1,24 @@
 import { Hono } from 'hono';
 import { Env } from '../env';
 import { getSessionDetail, getSessionRaiders, joinSession, LAST_ILVL_SQL } from '../db';
-import { isAdmin } from '../auth';
+import { hasSiteAccess, isAdmin, requireSite, setSiteCookie, siteGateEnabled } from '../auth';
 import { checkLogin, notifySession, presenceStub, sessionStub } from '../session';
 import { canDibs, Tier, TIER_RANK } from '../../shared/types';
 
 export const publicRoutes = new Hono<{ Bindings: Env }>();
+
+// ---- site gate (before everything else) ----
+publicRoutes.get('/site/me', async (c) => c.json({ ok: await hasSiteAccess(c), gated: siteGateEnabled(c.env) }));
+
+publicRoutes.post('/site/login', async (c) => {
+  const { password } = await c.req.json<{ password?: string }>();
+  if (!siteGateEnabled(c.env)) return c.json({ ok: true });
+  if (!password || password !== c.env.SITE_PASSWORD) return c.json({ error: 'wrong password' }, 401);
+  await setSiteCookie(c);
+  return c.json({ ok: true });
+});
+
+publicRoutes.use('*', requireSite);
 
 publicRoutes.get('/seasons', async (c) => {
   const seasons = await c.env.DB.prepare('SELECT * FROM seasons ORDER BY created_at DESC').all();

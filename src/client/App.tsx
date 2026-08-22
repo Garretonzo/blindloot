@@ -6,20 +6,34 @@ import { AdminLogin } from './pages/AdminLogin';
 import { AdminHome } from './pages/Admin';
 import { AdminSessionPage } from './pages/AdminSession';
 import { HistoryPage } from './pages/History';
+import { HelpPage } from './pages/Help';
 import { IdentityProvider, NamePrompt, useIdentity } from './identity';
+import { SiteGate } from './SiteGate';
 
 export function App() {
   const isAdminRoute = useLocation().pathname.startsWith('/admin');
+  // Admin pages have their own password; everything else sits behind the site password.
+  if (isAdminRoute) {
+    return (
+      <IdentityProvider observe>
+        <Shell />
+      </IdentityProvider>
+    );
+  }
   return (
-    <IdentityProvider observe={isAdminRoute}>
-      <Shell />
-    </IdentityProvider>
+    <SiteGate>
+      <IdentityProvider>
+        <Shell />
+      </IdentityProvider>
+    </SiteGate>
   );
 }
 
 function Shell() {
   const { identity, logout } = useIdentity();
-  const isAdminRoute = useLocation().pathname.startsWith('/admin');
+  const { pathname } = useLocation();
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isHelp = pathname === '/help';
 
   return (
     <AppShell header={{ height: 48 }} padding="md">
@@ -38,9 +52,13 @@ function Shell() {
                   </Anchor>
                 </Text>
               )}
-              {isAdminRoute && (
+              {isAdminRoute ? (
                 <Anchor component={Link} to="/admin" size="sm" c="dimmed" underline="never">
                   Admin
+                </Anchor>
+              ) : (
+                <Anchor component={Link} to="/help" size="sm" c="dimmed" underline="never">
+                  How it works
                 </Anchor>
               )}
             </Group>
@@ -49,11 +67,12 @@ function Shell() {
       </AppShell.Header>
       <AppShell.Main>
         <Container size="sm">
-          {!identity && !isAdminRoute ? (
+          {!identity && !isAdminRoute && !isHelp ? (
             <NamePrompt />
           ) : (
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/help" element={<HelpPage />} />
               <Route path="/s/:sessionId" element={<SessionPage />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminHome />} />

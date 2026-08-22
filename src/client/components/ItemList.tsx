@@ -1,6 +1,7 @@
 import { ActionIcon, Anchor, Autocomplete, Badge, Button, Group, Popover, Stack, Text } from '@mantine/core';
 import { useState } from 'react';
-import { Boss, canDibs, Item, LiveState, Raider, RaidItem, RollEntry, Tier, TIER_COLOR, TIER_LABEL } from '../../shared/types';
+import { Link } from 'react-router-dom';
+import { Boss, canDibs, Item, LiveState, Raider, RaidItem, RollEntry, Tier, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
 import { rankByTier } from '../../shared/resolve';
 import { lootFor } from '../../shared/raids';
 import { SubHeader } from './SectionCard';
@@ -35,8 +36,19 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
 
   if (bosses.length === 0) return <Text c="dimmed">No bosses yet.</Text>;
 
+  const canPlan = !!me && !!onPlan && bosses.some((b) => b.items.some((i) => i.resolved_at == null && i.id !== currentId));
+
   return (
     <Stack gap="sm">
+      {canPlan && (
+        <Text size="xs" c="dimmed">
+          <b>Plan ahead:</b> next to each upcoming item, pick what you'd roll. It pre-fills your choice when the item comes up; you can still
+          change it during the countdown.{' '}
+          <Anchor component={Link} to="/help" size="xs">
+            How it works
+          </Anchor>
+        </Text>
+      )}
       {bosses.map((b) => (
         <div key={b.id}>
           <SubHeader
@@ -120,7 +132,7 @@ function PlanButtons({ me, plan, onPlan }: { me: Raider; plan: Tier | null; onPl
             variant={selected ? 'filled' : 'outline'}
             disabled={disabled}
             onClick={() => onPlan(selected ? null : t)}
-            title={`Plan: ${TIER_LABEL[t]}`}
+            title={`Plan ${TIER_LABEL[t]} — ${TIER_HINT[t]}`}
           >
             {selected ? '✓ ' : ''}
             {TIER_LABEL[t]}

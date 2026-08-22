@@ -1,5 +1,6 @@
-import { Button, Select, Stack, Text } from '@mantine/core';
+import { Anchor, Button, Select, Stack, Text } from '@mantine/core';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api, Identity, loadIdentity, saveIdentity } from './api';
 import { SectionCard } from './components/SectionCard';
 import { loginEndedNotice, usePresence } from './presence';
@@ -96,6 +97,12 @@ export function NamePrompt() {
           <Button onClick={submit} loading={busy} disabled={!picked}>
             Log in
           </Button>
+          <Text size="xs" c="dimmed" ta="center">
+            First time here?{' '}
+            <Anchor component={Link} to="/help" size="xs">
+              How it works
+            </Anchor>
+          </Text>
         </Stack>
       </SectionCard>
     </div>

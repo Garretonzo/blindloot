@@ -20,7 +20,7 @@ Tiers, lowest to highest: **Transmog** → **Equip** → **Need** → **Dibs**.
 
 ```sh
 npm install
-cp .dev.vars.example .dev.vars      # set ADMIN_PASSWORD and SUPER_ADMIN_PASSWORD
+cp .dev.vars.example .dev.vars      # set ADMIN_PASSWORD, SUPER_ADMIN_PASSWORD, SITE_PASSWORD
 npm run db:migrate:local
 npm run dev                         # http://localhost:8787
 ```
@@ -57,8 +57,13 @@ npx wrangler d1 create loot          # paste database_id into wrangler.toml
 npm run db:migrate
 npx wrangler secret put ADMIN_PASSWORD
 npx wrangler secret put SUPER_ADMIN_PASSWORD   # optional; enables deleting seasons/sessions
+npx wrangler secret put SITE_PASSWORD          # what raiders enter before picking their name
 npm run deploy
 ```
+
+`SITE_PASSWORD` gates the whole raider-facing site (and its API): visitors enter it once per
+browser, before the name picker. Admins bypass it with their own login. Leave it unset to run
+without a gate.
 
 Both passwords are entered on the same `/admin` login form. There is no link to it from the
 raider-facing pages — admins go to `/admin` directly. A normal admin can create and edit
@@ -98,6 +103,8 @@ add your custom domain.
 8. **Close session** when the raid is fully done (no more joins/edits); **Reopen** if needed.
 
 Also:
+- `/help` ("How it works", linked from the header and the name picker) explains the roll types,
+  the Need/Dibs rule, the raid-night flow and a short FAQ for raiders.
 - Raiders can **pre-plan** a roll on any upcoming item from the loot list; it pre-fills their
   choice when the item comes up (they can still change it during the countdown). A planned Need
   or Dibs is demoted one tier automatically if they've already won with it.

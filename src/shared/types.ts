@@ -7,6 +7,14 @@ export const TIER_LABEL: Record<Tier, string> = {
   dibs: 'Dibs',
 };
 
+/** One-line meaning of each tier, shown in tooltips and on the help page. */
+export const TIER_HINT: Record<Tier, string> = {
+  greed: 'I want it for looks or to sell - unlimited rolls.',
+  equip: 'I would actually wear it for my main spec - unlimited rolls. Equip beats Transmog.',
+  need: 'I really, really want this - one win per week (per difficulty). Need beats Equip.',
+  dibs: 'I want this more than anything - one win per season. Dibs beats Need. Multiple people Dibs: higher item level wins.',
+};
+
 /** Mantine color per tier, used everywhere a tier is displayed. */
 export const TIER_COLOR: Record<Tier, string> = {
   greed: 'gray',

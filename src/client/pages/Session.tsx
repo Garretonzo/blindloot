@@ -86,17 +86,11 @@ export function SessionPage() {
       )}
 
       <SectionCard title="Loot">
-        <Alert variant="light" color="orange" mb="md" title="Reminder">
-          You only get <b>1 Need</b> per week (per difficulty). Winning with a <b>Dibs</b> uses that Need. Winning with a <b>Need</b> means you can't
-          use your Dibs this week.
+        <Alert variant="light" color="orange" mb="md">
+          You only get <b>1 Need</b> per week (per difficulty). Winning with a <b>Dibs</b> uses that Need. Winning with a <b>Need</b> means you can't use your
+          Dibs this week. Need and Dibs are only spent when you <b>win</b> with them. Rolling and losing costs nothing.
         </Alert>
         <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} me={me} plans={plans} onPlan={me ? setPlan : undefined} />
-        {me && detail.bosses.some((b) => b.items.some((i) => i.resolved_at == null)) && (
-          <Text size="xs" c="dimmed" mt="sm">
-            Pre-select what types of rolls you want to use on items. Your roll choice gets pre-filled when the item comes up. You can still change it
-            during the countdown. Need / Dibs drop a tier automatically on future loot if you end up winning with them on previous loot.
-          </Text>
-        )}
       </SectionCard>
 
       <SectionCard title="Raiders" right={<Text size="xs" c="dimmed">{detail.raiders.length} joined</Text>}>

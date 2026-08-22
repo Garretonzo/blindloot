@@ -12,7 +12,9 @@ async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
     const message = (data as { error?: string }).error ?? `HTTP ${res.status}`;
     // A raider action rejected as "not logged in" means our stored login is stale (expired,
     // ended by an admin, or the server's presence state was reset). Drop it.
-    if (res.status === 401 && !url.startsWith('/api/admin')) window.dispatchEvent(new CustomEvent(LOGIN_LOST_EVENT, { detail: message }));
+    if (res.status === 401 && !url.startsWith('/api/admin') && !url.startsWith('/api/site')) {
+      window.dispatchEvent(new CustomEvent(LOGIN_LOST_EVENT, { detail: message }));
+    }
     throw new Error(message);
   }
   return data as T;
@@ -22,6 +24,10 @@ async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
 export const LOGIN_LOST_EVENT = 'loot:login-lost';
 
 export const api = {
+  site: {
+    me: () => req<{ ok: boolean; gated: boolean }>('GET', '/api/site/me'),
+    login: (password: string) => req<{ ok: true }>('POST', '/api/site/login', { password }),
+  },
   seasons: () => req<{ seasons: Season[]; sessions: Session[] }>('GET', '/api/seasons'),
   session: (id: number, raiderId?: number | null) =>
     req<SessionDetail>('GET', `/api/sessions/${id}${raiderId ? `?raiderId=${raiderId}` : ''}`),
