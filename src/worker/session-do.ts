@@ -32,6 +32,7 @@ const initialState = (): LiveState => ({
   lastResult: null,
   shuffle: true,
   batchResults: null,
+  lockedIn: [],
   revision: 0,
 });
 
@@ -71,8 +72,9 @@ export class SessionDO extends DurableObject<Env> {
     }
 
     if (url.pathname === '/notify') {
-      // Data changed via REST; tell clients to refetch.
-      await this.save({ revision: this.state.revision + 1 });
+      // Data changed via REST; tell clients to refetch. Loot changes invalidate "happy with my picks".
+      const lootChanged = url.searchParams.get('loot') === '1';
+      await this.save({ revision: this.state.revision + 1, ...(lootChanged ? { lockedIn: [] } : {}) });
       return new Response('ok');
     }
 
@@ -127,6 +129,14 @@ export class SessionDO extends DurableObject<Env> {
         case 'choose':
           if (att.raiderId != null && this.state.phase === 'item') {
             await this.choose(att.raiderId, msg.tier);
+          }
+          break;
+        case 'lockIn':
+          if (att.raiderId != null) {
+            const set = new Set(this.state.lockedIn);
+            if (msg.value) set.add(att.raiderId);
+            else set.delete(att.raiderId);
+            await this.save({ lockedIn: [...set] });
           }
           break;
         case 'stage':
@@ -262,7 +272,7 @@ export class SessionDO extends DurableObject<Env> {
       const choices = await this.prefilledChoices(itemId); // re-read each time: earlier wins change eligibility
       results.push(await this.resolveOne(itemId, choices));
     }
-    await this.save({ batchResults: results, lastResult: null, revision: this.state.revision + 1 });
+    await this.save({ batchResults: results, lastResult: null, lockedIn: [], revision: this.state.revision + 1 });
   }
 
   private itemMs() {

@@ -137,7 +137,7 @@ export function AdminSessionPage() {
                   if (
                     confirm(
                       `Resolve all ${pendingCount} unrolled item${pendingCount === 1 ? '' : 's'} right now from pre-picks? No countdowns.\n\n` +
-                        `${withPicks} of ${detail.raiders.length} raiders have pre-picks${live?.shuffle ? '. Order will be randomized.' : '.'}`,
+                        `${withPicks} of ${detail.raiders.length} raiders have pre-picks; ${live?.lockedIn.length ?? 0} say they're happy with them${live?.shuffle ? '. Order will be randomized.' : '.'}`,
                     )
                   )
                     send({ type: 'runBatch' });
@@ -191,6 +191,9 @@ export function AdminSessionPage() {
             />
             {phase === 'open' && picks && pendingCount > 0 && (
               <Text size="xs" c="dimmed">
+                <Text span c={live && live.lockedIn.length === detail.raiders.length && detail.raiders.length > 0 ? 'green.4' : undefined} fw={600}>
+                  {live?.lockedIn.length ?? 0} of {detail.raiders.length} happy with their picks.
+                </Text>{' '}
                 Pre-picks: {picks.raiders.length} of {detail.raiders.length} raiders have set some
                 {picks.raiders.length > 0 &&
                   ` (${picks.raiders
@@ -265,7 +268,7 @@ export function AdminSessionPage() {
           onAward={(itemId, raiderId, tier, force) =>
             run(
               api.admin.award(sessionId, itemId, raiderId, tier, force).then((r) => {
-                if (tier && r.tier !== tier) notifications.show({ color: 'yellow', message: `Counted as ${TIER_LABEL[r.tier ?? 'greed']} — they had already won with Need/Dibs.` });
+                if (tier && r.tier !== tier) notifications.show({ color: 'yellow', message: `Counted as ${TIER_LABEL[r.tier ?? 'greed']} - they had already won with Need/Dibs.` });
               }),
             )
           }
@@ -286,6 +289,7 @@ export function AdminSessionPage() {
           raiders={detail.raiders}
           editable={phase !== 'closed'}
           readyIds={phase === 'ready' ? live?.readyRaiderIds : undefined}
+          lockedIn={phase === 'open' ? live?.lockedIn : undefined}
           onUpdate={(id, patch) => run(api.admin.updateRaider(sessionId, id, patch))}
           onRemove={(id) => confirm('Remove this raider from the session?') && run(api.admin.removeRaider(sessionId, id))}
         />

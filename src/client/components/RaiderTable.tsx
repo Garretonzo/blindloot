@@ -1,5 +1,5 @@
 import { ActionIcon, Badge, Group, NumberInput, Switch, Table, Text, TextInput } from '@mantine/core';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Boss, Raider } from '../../shared/types';
 import { Icon } from './Icon';
 import { EmptyState } from './ItemList';
@@ -8,6 +8,8 @@ import { IconUsers } from '@tabler/icons-react';
 interface Props {
   raiders: Raider[];
   readyIds?: number[];
+  /** Raiders who've said they're happy with their pre-picks (shown while the session is open). */
+  lockedIn?: number[];
   meId?: number | null;
   editable?: boolean;
   /** Needed for the public view to list each raider's loot won this session. */
@@ -16,9 +18,24 @@ interface Props {
   onRemove?: (raiderId: number) => void;
 }
 
-export function RaiderTable({ raiders, readyIds, meId, editable, bosses = [], onUpdate, onRemove }: Props) {
+export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosses = [], onUpdate, onRemove }: Props) {
   if (raiders.length === 0) return <EmptyState icon={<IconUsers size={26} />} text="Nobody here yet." />;
   const ready = new Set(readyIds ?? []);
+  const locked = new Set(lockedIn ?? []);
+  const picksCell = (id: number) =>
+    lockedIn ? (
+      <Table.Td w={70}>
+        {locked.has(id) ? (
+          <Badge size="xs" variant="light" color="green">
+            picks ✓
+          </Badge>
+        ) : (
+          <Text size="xs" c="dimmed">
+            —
+          </Text>
+        )}
+      </Table.Td>
+    ) : null;
 
   if (editable) {
     return (
@@ -29,13 +46,14 @@ export function RaiderTable({ raiders, readyIds, meId, editable, bosses = [], on
             <Table.Th>ilvl</Table.Th>
             <Table.Th>Need</Table.Th>
             <Table.Th>Dibs</Table.Th>
+            {lockedIn && <Table.Th>Picks</Table.Th>}
             {readyIds && <Table.Th>Ready</Table.Th>}
             <Table.Th />
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {raiders.map((r) => (
-            <EditableRow key={r.id} r={r} ready={readyIds ? ready.has(r.id) : undefined} onUpdate={onUpdate!} onRemove={onRemove!} />
+            <EditableRow key={r.id} r={r} ready={readyIds ? ready.has(r.id) : undefined} picks={picksCell(r.id)} onUpdate={onUpdate!} onRemove={onRemove!} />
           ))}
         </Table.Tbody>
       </Table>
@@ -51,6 +69,7 @@ export function RaiderTable({ raiders, readyIds, meId, editable, bosses = [], on
           <Table.Th>Name</Table.Th>
           <Table.Th>ilvl</Table.Th>
           <Table.Th>Loot this session</Table.Th>
+          {lockedIn && <Table.Th>Picks</Table.Th>}
           {readyIds && <Table.Th>Ready</Table.Th>}
         </Table.Tr>
       </Table.Thead>
@@ -83,6 +102,7 @@ export function RaiderTable({ raiders, readyIds, meId, editable, bosses = [], on
                   </Group>
                 )}
               </Table.Td>
+              {picksCell(r.id)}
               {readyIds && <Table.Td>{ready.has(r.id) ? '✓' : ''}</Table.Td>}
             </Table.Tr>
           );
@@ -95,11 +115,13 @@ export function RaiderTable({ raiders, readyIds, meId, editable, bosses = [], on
 function EditableRow({
   r,
   ready,
+  picks,
   onUpdate,
   onRemove,
 }: {
   r: Raider;
   ready?: boolean;
+  picks?: React.ReactNode;
   onUpdate: NonNullable<Props['onUpdate']>;
   onRemove: NonNullable<Props['onRemove']>;
 }) {
@@ -149,6 +171,7 @@ function EditableRow({
           )}
         </Group>
       </Table.Td>
+      {picks}
       {ready !== undefined && <Table.Td>{ready ? '✓' : ''}</Table.Td>}
       <Table.Td>
         <Group justify="flex-end">

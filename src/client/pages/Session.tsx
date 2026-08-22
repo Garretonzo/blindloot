@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Group, NumberInput, Stack, Text, Title } from '@mantine/core';
+import { Alert, Badge, Button, Group, NumberInput, Stack, Switch, Text, Title } from '@mantine/core';
 import { SectionCard } from '../components/SectionCard';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useState } from 'react';
@@ -95,7 +95,7 @@ export function SessionPage() {
       <SectionCard title="Loot">
         <Alert variant="light" color="orange" mb="md">
           <b>One Need</b> per week (per difficulty). Win with <b>Dibs</b> and it eats your Need. Win with <b>Need</b> and your Dibs is benched for the
-          week. Losing costs nothing, so — just fucking roll.
+          week. Losing costs nothing, so... just fucking roll.
         </Alert>
         {me && detail.session.status === 'open' && unresolved.size > 0 && (
           <Text size="xs" c="dimmed" mb="sm">
@@ -103,11 +103,31 @@ export function SessionPage() {
             {live?.shuffle !== false ? ', in random order' : ', in list order'}. No pick, no roll.
           </Text>
         )}
+        {me && detail.session.status === 'open' && unresolved.size > 0 && live && (
+          <Group justify="space-between" mb="md" p="sm" style={{ borderRadius: 8, border: '1px solid var(--mantine-color-dark-5)', background: 'var(--mantine-color-dark-6)' }}>
+            <div>
+              <Text size="sm" fw={600}>
+                Happy with your picks?
+              </Text>
+              <Text size="xs" c="dimmed">
+                Tell the officer you're good to go. {live.lockedIn.length} of {detail.raiders.length} are. It resets if loot changes.
+              </Text>
+            </div>
+            <Switch
+              size="md"
+              color="teal"
+              onLabel="YES"
+              offLabel="NO"
+              checked={live.lockedIn.includes(me.id)}
+              onChange={(e) => send({ type: 'lockIn', value: e.currentTarget.checked })}
+            />
+          </Group>
+        )}
         {me && bigPlans.length > 1 && (
           <Alert variant="light" color="red" mb="md" title={`You're pre-picking Need/Dibs on ${bigPlans.length} items`}>
             You only get one big win. The moment you <b>win</b> one with Need or Dibs, every other Need/Dibs you've pre-picked drops to{' '}
-            <b>Equip</b> automatically. Pre-picking several is fine — it just means "whichever comes first"
-            {live?.shuffle !== false ? ', and the order is random' : ''}. If one of them matters more, Need that one only.
+            <b>Equip</b> automatically. Pre-picking several is fine. It just means "whichever comes first"
+            {live?.shuffle !== false ? ', and the order is random' : ''}. If one of them matters more, maybe think about Needing that one only. The risk is yours. 
           </Alert>
         )}
         <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} me={me} plans={plans} onPlan={me ? setPlan : undefined} />
@@ -119,6 +139,7 @@ export function SessionPage() {
           bosses={detail.bosses}
           meId={me?.id}
           readyIds={live?.phase === 'ready' ? live.readyRaiderIds : undefined}
+          lockedIn={live?.phase === 'open' ? live.lockedIn : undefined}
         />
       </SectionCard>
     </Stack>

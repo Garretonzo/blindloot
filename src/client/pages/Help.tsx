@@ -86,7 +86,7 @@ export function HelpPage() {
             <b>In game, everyone passes on everything.</b> The loot officer picks it all up. Nothing gets rolled in the game client.
           </List.Item>
           <List.Item>
-            Open the session here and enter your item level. Your real one — it's shown to everyone and it decides Dibs ties. (The loot
+            Open the session here and enter your item level. Your real one... it's shown to everyone btw, and it decides Dibs ties. (The loot
             officer can also add you or fix it.)
           </List.Item>
           <List.Item>As bosses die, the loot officer adds them and what dropped. The list updates live.</List.Item>
@@ -95,15 +95,15 @@ export function HelpPage() {
             you can change them until the item is resolved, and when the batch runs, no pick means no roll.
           </List.Item>
           <List.Item>
-            When loot's done, the loot officer <b>runs the batch</b>: the site resolves every item from everyone's picks in one go — same
-            dice, same Need/Dibs demotion between items — and posts the results. No countdowns, no waiting. <b>Items are resolved in a
+            Happy with your picks? Flip the <b>YES</b> switch under the Loot card so the officer knows. It resets whenever loot is added.
+            When loot's done, the loot officer <b>runs the batch</b>: the site resolves every item from everyone's picks in one go and posts the results. <b>Items are resolved in a
             random order</b>, so "first on the list" means nothing: if you pre-pick Need on three items, any of them could be the one that
-            spends it.
+            spends it. The risk is yours. 
           </List.Item>
           <List.Item>
             Sometimes the officer runs a <b>live roll-off</b> instead: ready check, then items one at a time with a countdown. Your pre-picks
             pre-fill each roll and you can still change them during the countdown. Whether that happens is the officer's call, so don't
-            bank on it — pick ahead either way.
+            bank on it. Pick ahead either way.
           </List.Item>
           <List.Item>
             Multi-night raid? The session stays open. Next night, more loot gets added and resolved, with the same Need/Dibs state.
@@ -128,7 +128,7 @@ export function HelpPage() {
             <Accordion.Control>I pre-picked Need on two items. What if I win one?</Accordion.Control>
             <Accordion.Panel>
               The other drops a step automatically (Need → Equip, Dibs → Need). You can't roll with something you no longer have. And since
-              the order is random, you don't get to choose which one goes first — if one matters more, maybe pick Need on that one only. The risk is yours.
+              the order is random, you don't get to choose which one goes first. If one matters more, maybe pick Need on that one only. The risk is yours.
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="order">
@@ -159,9 +159,9 @@ export function HelpPage() {
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="batch">
-            <Accordion.Control>Batch vs. live roll-off — what's the difference?</Accordion.Control>
+            <Accordion.Control>Batch vs. live roll-off - what's the difference?</Accordion.Control>
             <Accordion.Panel>
-              Same rules, same dice, same Need/Dibs demotion between items. The batch resolves everything at once from pre-picks — no
+              Same rules, same dice, same Need/Dibs demotion between items. The batch resolves everything at once from pre-picks. No
               pick, no roll. The live roll-off does it one item at a time with a countdown; your pre-pick pre-fills the roll, but you can
               change it or roll fresh during the countdown. The officer decides which happens, so pre-pick as if it'll be the batch.
             </Accordion.Panel>

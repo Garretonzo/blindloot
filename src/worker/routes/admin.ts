@@ -154,7 +154,7 @@ adminRoutes.post('/sessions/:id/bosses', async (c) => {
       ),
     );
   }
-  await notifySession(c.env, sessionId);
+  await notifySession(c.env, sessionId, true);
   return c.json({ ok: true });
 });
 
@@ -170,7 +170,7 @@ adminRoutes.post('/sessions/:id/bosses/:bossId/items', async (c) => {
   await db.prepare('INSERT INTO items (boss_id, name, icon, sort_order) VALUES (?, ?, ?, ?)')
     .bind(bossId, name.trim(), icon ?? null, order?.n ?? 1)
     .run();
-  await notifySession(c.env, sessionId);
+  await notifySession(c.env, sessionId, true);
   return c.json({ ok: true });
 });
 
@@ -182,7 +182,7 @@ adminRoutes.delete('/sessions/:id/items/:itemId', async (c) => {
     c.env.DB.prepare('DELETE FROM plans WHERE item_id = ?').bind(itemId),
     c.env.DB.prepare('DELETE FROM items WHERE id = ?').bind(itemId),
   ]);
-  await notifySession(c.env, sessionId);
+  await notifySession(c.env, sessionId, true);
   return c.json({ ok: true });
 });
 
@@ -276,7 +276,7 @@ adminRoutes.delete('/sessions/:id/bosses/:bossId', async (c) => {
     c.env.DB.prepare('DELETE FROM items WHERE boss_id = ?').bind(bossId),
     c.env.DB.prepare('DELETE FROM bosses WHERE id = ?').bind(bossId),
   ]);
-  await notifySession(c.env, sessionId);
+  await notifySession(c.env, sessionId, true);
   return c.json({ ok: true });
 });
 

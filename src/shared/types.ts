@@ -156,6 +156,8 @@ export interface LiveState {
   shuffle: boolean;
   /** Results of the last instant batch (replaced by the next one; cleared when a live roll-off starts). */
   batchResults: ItemResult[] | null;
+  /** Raiders who've said they're happy with their pre-picks (cleared when loot changes or a batch runs). */
+  lockedIn: number[];
   /** bump to tell clients to refetch session detail */
   revision: number;
 }
@@ -163,6 +165,7 @@ export interface LiveState {
 export type ClientMessage =
   | { type: 'ready' }
   | { type: 'choose'; tier: Tier | null }
+  | { type: 'lockIn'; value: boolean }
   | { type: 'stage' }
   | { type: 'start' }
   | { type: 'next' }

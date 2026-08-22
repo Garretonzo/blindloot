@@ -19,6 +19,7 @@ export async function clearSession(env: Env, sessionId: number) {
   await sessionStub(env, sessionId).fetch(`https://do/clear?sessionId=${sessionId}`);
 }
 
-export async function notifySession(env: Env, sessionId: number) {
-  await sessionStub(env, sessionId).fetch(`https://do/notify?sessionId=${sessionId}`);
+/** Tell the session's live clients to refetch. `lootChanged` also clears raiders' "happy with my picks" flags. */
+export async function notifySession(env: Env, sessionId: number, lootChanged = false) {
+  await sessionStub(env, sessionId).fetch(`https://do/notify?sessionId=${sessionId}${lootChanged ? '&loot=1' : ''}`);
 }
