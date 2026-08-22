@@ -95,7 +95,7 @@ export function SessionPage() {
       <SectionCard title="Loot">
         <Alert variant="light" color="orange" mb="md">
           <b>One Need</b> per week (per difficulty). Win with <b>Dibs</b> and it eats your Need. Win with <b>Need</b> and your Dibs is benched for the
-          week. Losing costs nothing, so... just fucking roll.
+          week. Need and Dibs are only spent when you <b>win</b>. Losing costs nothing, so... just fucking roll.
         </Alert>
         {me && detail.session.status === 'open' && unresolved.size > 0 && (
           <Text size="xs" c="dimmed" mb="sm">

@@ -52,7 +52,7 @@ export function HelpPage() {
 
       <SectionCard title="Roll types">
         <Text size="sm" c="dimmed" mb="sm">
-          When an item comes up you pick one. Highest type present wins; ties within a type are a 1–100 roll.
+          Pick one per item. Highest type present wins; ties within a type are a 1–100 roll.
         </Text>
         <Table verticalSpacing="xs" withRowBorders={false}>
           <Table.Tbody>
@@ -73,7 +73,7 @@ export function HelpPage() {
       <SectionCard title="The one rule to remember">
         <Alert variant="light" color="orange">
           <b>One Need</b> per week (per difficulty). Win with <b>Dibs</b> and it eats your Need. Win with <b>Need</b> and your Dibs is benched for
-          the week. Need and Dibs are only spent when you <b>win</b>. Losing costs nothing.
+          the week. Need and Dibs are only spent when you <b>win</b>. Losing costs nothing, so... just fucking roll.
         </Alert>
         <Text size="sm" c="dimmed" mt="sm">
           Dibs comes back each season. Need comes back each week (per difficulty).
@@ -98,7 +98,7 @@ export function HelpPage() {
             Dibs ties. (The loot officer can also add you or fix it.)
           </List.Item>
           <List.Item>
-            <b>Pre-pick your roll on every item you want.</b> This is not optional. This is the roll. Nobody sees your picks, you can change
+            <b>Pre-pick your roll on every item you want.</b> Do not miss this. This is the roll. Nobody sees your picks, you can change
             them until the item is resolved, and when the batch runs, no pick means no roll. You can set these during the raid if you've got
             a spare moment, but the expectation is: kill things now, roll later.
           </List.Item>
@@ -108,13 +108,13 @@ export function HelpPage() {
             random order</b>, so "first on the list" means nothing: if you pre-pick Need on three items, any of them could be the one that
             spends it. The risk is yours. 
           </List.Item>
-          <List.Item>
+          {/* <List.Item>
             Sometimes the officer runs a <b>live roll-off</b> instead: ready check, then items one at a time with a countdown. Your pre-picks
             pre-fill each roll and you can still change them during the countdown. Whether that happens is the officer's call, so don't
             bank on it. Pick ahead either way.
-          </List.Item>
+          </List.Item> */}
           <List.Item>
-            Multi-night raid? The session stays open. Next night, more loot gets added and resolved, with the same Need/Dibs state.
+            Multi-night raid? Loot gets distributed but the session stays open on the site. Next raid night, more loot gets added and resolved, with the same Need/Dibs state.
           </List.Item>
         </List>
       </SectionCard>
@@ -128,10 +128,10 @@ export function HelpPage() {
               wins, and only an exact tie goes to the dice.
             </Accordion.Panel>
           </Accordion.Item>
-          <Accordion.Item value="change">
+          {/* <Accordion.Item value="change">
             <Accordion.Control>Can I change my roll during the countdown?</Accordion.Control>
             <Accordion.Panel>Yes. Click another type, or click the selected one again to withdraw. Only what's selected at zero counts.</Accordion.Panel>
-          </Accordion.Item>
+          </Accordion.Item> */}
           <Accordion.Item value="planned">
             <Accordion.Control>I pre-picked Need on two items. What if I win one?</Accordion.Control>
             <Accordion.Panel>
@@ -142,8 +142,7 @@ export function HelpPage() {
           <Accordion.Item value="order">
             <Accordion.Control>What order are items rolled in?</Accordion.Control>
             <Accordion.Panel>
-              Random, by default, for both the batch and the live roll-off. The loot officer can switch it to list order, but assume
-              random. During a live roll-off the list shows a #n badge with the actual order.
+              Random, by default. The loot officer can switch it to list order, but assume random.
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="tab">
@@ -166,14 +165,14 @@ export function HelpPage() {
               anyone else's Need/Dibs status.
             </Accordion.Panel>
           </Accordion.Item>
-          <Accordion.Item value="batch">
+          {/* <Accordion.Item value="batch">
             <Accordion.Control>Batch vs. live roll-off - what's the difference?</Accordion.Control>
             <Accordion.Panel>
               Same rules, same dice, same Need/Dibs demotion between items. The batch resolves everything at once from pre-picks. No
               pick, no roll. The live roll-off does it one item at a time with a countdown; your pre-pick pre-fills the roll, but you can
               change it or roll fresh during the countdown. The officer decides which happens, so pre-pick as if it'll be the batch.
             </Accordion.Panel>
-          </Accordion.Item>
+          </Accordion.Item> */}
           <Accordion.Item value="give">
             <Accordion.Control>I won something I don't actually want.</Accordion.Control>
             <Accordion.Panel>
