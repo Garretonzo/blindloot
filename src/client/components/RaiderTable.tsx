@@ -2,6 +2,8 @@ import { ActionIcon, Badge, Group, NumberInput, Switch, Table, Text, TextInput }
 import { useEffect, useState } from 'react';
 import { Boss, Raider } from '../../shared/types';
 import { Icon } from './Icon';
+import { EmptyState } from './ItemList';
+import { IconUsers } from '@tabler/icons-react';
 
 interface Props {
   raiders: Raider[];
@@ -15,7 +17,7 @@ interface Props {
 }
 
 export function RaiderTable({ raiders, readyIds, meId, editable, bosses = [], onUpdate, onRemove }: Props) {
-  if (raiders.length === 0) return <Text c="dimmed">No raiders have joined.</Text>;
+  if (raiders.length === 0) return <EmptyState icon={<IconUsers size={26} />} text="Nobody has joined yet." />;
   const ready = new Set(readyIds ?? []);
 
   if (editable) {
@@ -56,11 +58,11 @@ export function RaiderTable({ raiders, readyIds, meId, editable, bosses = [], on
         {raiders.map((r) => {
           const won = items.filter((i) => i.winner_raider_id === r.id);
           return (
-            <Table.Tr key={r.id}>
-              <Table.Td fw={r.id === meId ? 700 : 400} style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+            <Table.Tr key={r.id} style={r.id === meId ? { background: 'rgba(18,184,134,0.08)' } : undefined}>
+              <Table.Td fw={r.id === meId ? 700 : 400} c={r.id === meId ? 'teal.2' : undefined} style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
                 {r.username}
                 {r.id === meId && (
-                  <Badge size="xs" variant="outline" ml={6}>
+                  <Badge size="xs" variant="light" color="teal" ml={6}>
                     you
                   </Badge>
                 )}

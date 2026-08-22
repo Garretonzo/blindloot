@@ -1,6 +1,7 @@
 import { Anchor, Badge, Button, Group, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { RAIDS, raidById, raidLabel } from '../../shared/raids';
 import { SectionCard, SubHeader } from '../components/SectionCard';
+import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
 import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -335,9 +336,7 @@ export function AdminHome() {
                     </Anchor>
                   </EditableName>
                   <Group gap="sm">
-                    <Badge variant="light" size="sm" color={s.status === 'closed' ? 'gray' : 'blue'}>
-                      {s.status}
-                    </Badge>
+                    <StatusBadge status={s.status} />
                     {isSuper && (
                       <Anchor component="button" size="xs" c="red" onClick={() => deleteSession(s)}>
                         Delete

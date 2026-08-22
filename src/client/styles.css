@@ -1,0 +1,58 @@
+/* Page background: slate with a teal glow top-left and a faint grape glow bottom-right. */
+body {
+  background:
+    radial-gradient(900px 500px at -10% -10%, rgba(18, 184, 134, 0.14), transparent 60%),
+    radial-gradient(800px 500px at 110% 110%, rgba(190, 75, 219, 0.08), transparent 60%),
+    var(--mantine-color-body);
+  background-attachment: fixed;
+}
+
+/* Gradient brand text. */
+.brand {
+  background: linear-gradient(90deg, var(--mantine-color-teal-4), var(--mantine-color-cyan-4));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Ready-check call to action. */
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(18, 184, 134, 0.55);
+  }
+  60% {
+    box-shadow: 0 0 0 12px rgba(18, 184, 134, 0);
+  }
+}
+.pulse {
+  animation: pulse 1.6s ease-out infinite;
+}
+
+/* Winner reveal. */
+@keyframes pop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.pop {
+  animation: pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Live "now" indicator. */
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+.blink {
+  animation: blink 1.2s ease-in-out infinite;
+}

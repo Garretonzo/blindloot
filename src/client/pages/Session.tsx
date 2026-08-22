@@ -141,7 +141,7 @@ function JoinForm({ sessionId, seasonId, me, onJoined }: { sessionId: number; se
         <NumberInput label="Your current item level" value={itemLevel} onChange={setItemLevel} min={0} allowDecimal={false} autoFocus />
         {seasonInfo === null && (
           <Text size="xs" c="dimmed">
-            First session this season — you start with your Dibs.
+            First raid night this season. You start with your Dibs.
           </Text>
         )}
         {seasonInfo && (

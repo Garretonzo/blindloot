@@ -1,5 +1,5 @@
 import { Button, PasswordInput, Stack } from '@mantine/core';
-import { SectionCard } from '../components/SectionCard';
+import { GateCard } from '../components/SectionCard';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -24,8 +24,7 @@ export function AdminLogin() {
   };
 
   return (
-    <div style={{ maxWidth: 360, margin: '0 auto' }}>
-      <SectionCard title="Admin login">
+    <GateCard title="Admin login" tagline="Loot officer tools">
       <Stack gap="xs">
         <PasswordInput
           label="Password"
@@ -33,12 +32,12 @@ export function AdminLogin() {
           onChange={(e) => setPassword(e.currentTarget.value)}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
           error={error}
+          autoFocus
         />
         <Button onClick={submit} loading={busy}>
           Log in
         </Button>
       </Stack>
-      </SectionCard>
-    </div>
+    </GateCard>
   );
 }

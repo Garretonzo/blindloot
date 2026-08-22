@@ -1,5 +1,6 @@
 import { Badge, Group, Stack, Table, Text, Title } from '@mantine/core';
 import { SectionCard } from '../components/SectionCard';
+import { StatusBadge } from '../components/StatusBadge';
 import { TierBadge } from '../components/TierBadge';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -37,7 +38,7 @@ export function HistoryPage() {
       </SectionCard>
 
       {data.sessions.map((s) => (
-        <SectionCard key={s.id} title={s.name} right={<Badge size="xs" variant="light">{s.status}</Badge>}>
+        <SectionCard key={s.id} title={s.name} right={<StatusBadge status={s.status} size="xs" />}>
           <Table verticalSpacing={2} withRowBorders={false}>
             <Table.Tbody>
               {data.items

@@ -1,4 +1,5 @@
 import { AppShell, Anchor, Container, Group, Text } from '@mantine/core';
+import { IconSwords } from '@tabler/icons-react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { SessionPage } from './pages/Session';
@@ -36,17 +37,37 @@ function Shell() {
   const isHelp = pathname === '/help';
 
   return (
-    <AppShell header={{ height: 48 }} padding="md">
-      <AppShell.Header>
+    <AppShell header={{ height: 52 }} padding="md">
+      <AppShell.Header
+        style={{
+          borderBottom: 'none',
+          backgroundImage: 'linear-gradient(90deg, var(--mantine-color-teal-5), var(--mantine-color-cyan-5))',
+          backgroundSize: '100% 3px',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'bottom',
+        }}
+      >
         <Container size="sm" h="100%">
           <Group h="100%" justify="space-between">
-            <Anchor component={Link} to="/" fw={600} c="inherit" underline="never">
-              Loot
+            <Anchor component={Link} to={isAdminRoute ? '/admin' : '/'} underline="never">
+              <Group gap={6}>
+                <IconSwords size={20} stroke={2} color="var(--mantine-color-teal-4)" />
+                <Text fw={800} fz="lg" className="brand">
+                  Blind Loot
+                </Text>
+                {isAdminRoute && (
+                  <Text size="xs" c="dimmed" mt={3}>
+                    admin
+                  </Text>
+                )}
+              </Group>
             </Anchor>
             <Group gap="sm">
               {identity && (
                 <Text size="sm" c="dimmed">
-                  {identity.username}{' '}
+                  <Text span c="teal.3" fw={600}>
+                    {identity.username}
+                  </Text>{' '}
                   <Anchor component="button" size="xs" c="dimmed" onClick={logout}>
                     (log out)
                   </Anchor>
@@ -65,7 +86,7 @@ function Shell() {
           </Group>
         </Container>
       </AppShell.Header>
-      <AppShell.Main>
+      <AppShell.Main style={{ background: 'transparent' }}>
         <Container size="sm">
           {!identity && !isAdminRoute && !isHelp ? (
             <NamePrompt />

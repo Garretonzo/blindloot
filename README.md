@@ -1,5 +1,7 @@
-# Loot
+# Blind Loot
 
+Blind loot distributor for guild raids: everyone rolls without seeing anyone else's choice, and
+results show who won but never how — so there's nothing to game and nothing to argue about.
 Minimal WoW raid loot distribution app. React + Mantine front end, Cloudflare Worker back end
 (Hono), D1 (SQLite) for persistence, a Durable Object per session for live state, WebSockets
 and countdown timers.

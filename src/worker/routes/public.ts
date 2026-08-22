@@ -165,7 +165,7 @@ publicRoutes.post('/sessions/:id/join', async (c) => {
 
   const db = c.env.DB;
   const raider = await db.prepare('SELECT id, username FROM raiders WHERE id = ?').bind(raiderId).first<{ id: number; username: string }>();
-  if (!raider) return c.json({ error: 'unknown raider — set your name first' }, 404);
+  if (!raider) return c.json({ error: 'unknown raider - set your name first' }, 404);
 
   await joinSession(db, sessionId, session.season_id, raider.id, itemLevel);
   await notifySession(c.env, sessionId);

@@ -44,7 +44,7 @@ export function usePresence(identity: Identity | null, onEnded: (reason: string)
         if (!opened && identity) {
           const { ok } = await api.checkLogin(identity).catch(() => ({ ok: true })); // network issue → keep trying
           if (closed) return;
-          if (!ok) return onEndedRef.current('Your login expired — please pick your name again.');
+          if (!ok) return onEndedRef.current('Your login expired. Please pick your name again.');
         }
         attempt += 1;
         timer = window.setTimeout(connect, Math.min(10_000, 500 * 2 ** attempt));
@@ -53,7 +53,7 @@ export function usePresence(identity: Identity | null, onEnded: (reason: string)
     };
 
     // Any raider API call answered "not logged in" also ends the login.
-    const onLost = () => onEndedRef.current('Your login expired — please pick your name again.');
+    const onLost = () => onEndedRef.current('Your login expired. Please pick your name again.');
     window.addEventListener(LOGIN_LOST_EVENT, onLost);
 
     connect();

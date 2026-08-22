@@ -10,6 +10,31 @@ export function HelpPage() {
     <Stack gap="lg">
       <Title order={3}>How it works</Title>
 
+      <SectionCard title="Why “blind”?">
+        <Text size="sm" mb="xs">
+          Loot drama comes from people gaming the system and playing the other raiders (or playing yourselves, congratulations) instead of rolling honestly: waiting to see who else Needs, hovering over
+          the button until the last second, saving a Need all night for a drop that never comes, or spending it early on trash and
+          regretting it. Blind Loot takes that degen behavior away:
+        </Text>
+        <List size="sm" spacing={4}>
+          <List.Item>
+            <b>Nobody sees anyone else's roll.</b> Not during, not who's hovering, not even how many picked Need.
+          </List.Item>
+          <List.Item>
+            <b>Results show who won, not how.</b> Only the loot officer sees the details.
+          </List.Item>
+          <List.Item>
+            <b>Your pre-plans are private</b> and pre-fill your roll, so you decide what an item is worth to you up front in an honest manner.
+          </List.Item>
+          <List.Item>
+            <b>Need and Dibs only cost you when you win</b>, and the rules below are the same for everyone.
+          </List.Item>
+        </List>
+        <Text size="sm" c="dimmed" mt="xs">
+          Roll what the item is honestly worth to you. That's the whole point of the system.
+        </Text>
+      </SectionCard>
+
       <SectionCard title="Roll types">
         <Text size="sm" c="dimmed" mb="sm">
           When an item comes up you pick one. The highest type present wins; ties within a type are a 1–100 roll.
@@ -104,7 +129,7 @@ export function HelpPage() {
           <Accordion.Item value="give">
             <Accordion.Control>I won something I actually don't want.</Accordion.Control>
             <Accordion.Panel>
-              Tell the loot officer — they can hand it to the runner-up, and your Need/Dibs is refunded if you'd used it.
+              Tell the loot officer. They can hand it to the runner-up, and your Need/Dibs is refunded if you'd used it.
             </Accordion.Panel>
           </Accordion.Item>
         </Accordion>

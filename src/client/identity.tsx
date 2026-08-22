@@ -2,7 +2,7 @@ import { Anchor, Button, Select, Stack, Text } from '@mantine/core';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, Identity, loadIdentity, saveIdentity } from './api';
-import { SectionCard } from './components/SectionCard';
+import { GateCard } from './components/SectionCard';
 import { loginEndedNotice, usePresence } from './presence';
 
 interface Ctx {
@@ -73,8 +73,7 @@ export function NamePrompt() {
   };
 
   return (
-    <div style={{ maxWidth: 360, margin: '0 auto' }}>
-      <SectionCard title="Who are you?">
+    <GateCard title="Who are you?" tagline="blind loot distributor">
         <Stack gap="xs">
           <Select
             label="Your name"
@@ -88,7 +87,7 @@ export function NamePrompt() {
             onChange={setPicked}
             searchable
             error={error}
-            nothingFoundMessage="Not on the roster — ask an admin to add you"
+            nothingFoundMessage="Not on the roster. Ask an admin to add you"
           />
           <Text size="xs" c="dimmed">
             Greyed-out names are already logged in somewhere. Closing that tab frees the name after about 30 seconds,
@@ -98,13 +97,11 @@ export function NamePrompt() {
             Log in
           </Button>
           <Text size="xs" c="dimmed" ta="center">
-            First time here?{' '}
             <Anchor component={Link} to="/help" size="xs">
               How it works
             </Anchor>
           </Text>
         </Stack>
-      </SectionCard>
-    </div>
+    </GateCard>
   );
 }

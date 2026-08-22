@@ -117,7 +117,7 @@ export function BossForm({ raidId, onSubmit }: Props) {
       )}
       <TextInput
         label="Other items (not in the pool)"
-        placeholder="Comma-separated, optional — repeat a name to add it twice"
+        placeholder="Comma-separated, optional. Repeat a name to add it twice"
         value={custom}
         onChange={(e) => setCustom(e.currentTarget.value)}
         disabled={!boss}

@@ -1,6 +1,7 @@
 import { ActionIcon, Anchor, Autocomplete, Badge, Button, Group, Popover, Stack, Text } from '@mantine/core';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { IconSkull } from '@tabler/icons-react';
 import { Boss, canDibs, Item, LiveState, Raider, RaidItem, RollEntry, Tier, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
 import { rankByTier } from '../../shared/resolve';
 import { lootFor } from '../../shared/raids';
@@ -34,7 +35,7 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
   const currentId = live && (live.phase === 'item' || live.phase === 'results') ? live.itemIds[live.currentIndex] : null;
   const name = (id: number | null) => raiders.find((r) => r.id === id)?.username ?? '?';
 
-  if (bosses.length === 0) return <Text c="dimmed">No bosses yet.</Text>;
+  if (bosses.length === 0) return <EmptyState icon={<IconSkull size={28} />} text="No bosses down yet. Loot will appear here as they fall." />;
 
   const canPlan = !!me && !!onPlan && bosses.some((b) => b.items.some((i) => i.resolved_at == null && i.id !== currentId));
 
@@ -72,16 +73,26 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
             {b.items.map((i) => {
               const isCurrent = i.id === currentId;
               const resolved = i.resolved_at != null;
+              const wonColor = i.winner_raider_id != null && i.win_tier ? `var(--mantine-color-${TIER_COLOR[i.win_tier]}-5)` : null;
               return (
-                <div key={i.id}>
+                <div
+                  key={i.id}
+                  style={
+                    isCurrent
+                      ? { borderLeft: '3px solid var(--mantine-color-teal-5)', marginLeft: -12, paddingLeft: 9, background: 'rgba(18,184,134,0.07)', borderRadius: 4 }
+                      : undefined
+                  }
+                >
                   <Group justify="space-between" wrap="nowrap">
                     <Group gap="xs" wrap="nowrap">
-                      <Icon src={i.icon} size="sm" alt={i.name} />
-                      <Text size="sm" fw={isCurrent ? 700 : 400} c={isCurrent ? undefined : resolved ? 'dimmed' : undefined}>
+                      <span style={wonColor ? { boxShadow: `0 0 0 2px ${wonColor}`, borderRadius: 4, display: 'inline-flex' } : { display: 'inline-flex' }}>
+                        <Icon src={i.icon} size="sm" alt={i.name} />
+                      </span>
+                      <Text size="sm" fw={isCurrent ? 700 : 400} c={isCurrent ? 'teal.2' : resolved ? 'dimmed' : undefined}>
                         {i.name}
                       </Text>
                       {isCurrent && (
-                        <Badge size="xs" variant="filled">
+                        <Badge size="xs" variant="dot" color="teal" className="blink">
                           now
                         </Badge>
                       )}
@@ -114,6 +125,15 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
         </div>
       ))}
     </Stack>
+  );
+}
+
+export function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <Group gap="sm" c="dimmed" py="xs">
+      {icon}
+      <Text size="sm">{text}</Text>
+    </Group>
   );
 }
 

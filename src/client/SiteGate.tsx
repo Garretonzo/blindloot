@@ -1,7 +1,7 @@
 import { Button, PasswordInput, Stack, Text } from '@mantine/core';
 import { ReactNode, useEffect, useState } from 'react';
 import { api } from './api';
-import { SectionCard } from './components/SectionCard';
+import { GateCard } from './components/SectionCard';
 
 /**
  * Site-wide password. Shown before anything else (including the name picker) until the
@@ -37,11 +37,10 @@ export function SiteGate({ children }: { children: ReactNode }) {
   if (ok) return <>{children}</>;
 
   return (
-    <div style={{ maxWidth: 360, margin: '0 auto' }}>
-      <SectionCard title="Raid loot">
+    <GateCard title="Site password" tagline="blind loot distributor">
         <Stack gap="xs">
           <PasswordInput
-            label="Site password"
+            label="Password"
             value={password}
             onChange={(e) => setPassword(e.currentTarget.value)}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -55,7 +54,6 @@ export function SiteGate({ children }: { children: ReactNode }) {
             Enter
           </Button>
         </Stack>
-      </SectionCard>
-    </div>
+    </GateCard>
   );
 }

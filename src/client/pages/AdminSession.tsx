@@ -1,5 +1,6 @@
 import { Anchor, Badge, Button, Checkbox, Group, NumberInput, Select, Stack, Text, Title } from '@mantine/core';
 import { SectionCard, SubHeader } from '../components/SectionCard';
+import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -52,7 +53,7 @@ function AddRaiderRow({ inSession, onAdd }: { inSession: number[]; onAdd: (raide
         value={raiderId}
         onChange={setRaiderId}
         searchable
-        nothingFoundMessage="No such raider — add them on the Admin page"
+        nothingFoundMessage="No such raider. Add them on the Admin page."
       />
       <NumberInput size="xs" w={90} label="ilvl" value={ilvl} min={0} allowDecimal={false} onChange={setIlvl} onKeyDown={(e) => e.key === 'Enter' && submit()} />
       <Button size="xs" onClick={submit} loading={busy} disabled={!raiderId}>
@@ -109,9 +110,13 @@ export function AdminSessionPage() {
       <SectionCard
         title="Controls"
         right={
-          <Badge size="xs" variant="light" color={paused ? 'yellow' : phase === 'closed' ? 'gray' : 'blue'}>
-            {paused ? 'paused' : phase}
-          </Badge>
+          paused ? (
+            <Badge size="xs" variant="filled" color="yellow">
+              paused
+            </Badge>
+          ) : (
+            <StatusBadge status={detail.session.status} size="xs" />
+          )
         }
       >
         <Group>

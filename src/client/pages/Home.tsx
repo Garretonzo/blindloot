@@ -1,6 +1,10 @@
 import { Anchor, Badge, Group, Stack, Text } from '@mantine/core';
+import { IconChevronRight, IconMoodEmpty } from '@tabler/icons-react';
 import { SectionCard } from '../components/SectionCard';
+import { StatusBadge } from '../components/StatusBadge';
+import { EmptyState } from '../components/ItemList';
 import { useIdentity } from '../identity';
+import { raidById } from '../../shared/raids';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
@@ -23,43 +27,65 @@ export function Home() {
 
   const dibsBadge = (seasonId: number) => {
     if (!identity) return null;
-    const s = mine[seasonId];
-    if (!s) return <Badge size="xs" variant="light" color="grape">Dibs available</Badge>;
-    return s.hasDibs ? (
-      <Badge size="xs" variant="light" color="grape">Dibs available</Badge>
-    ) : (
-      <Badge size="xs" variant="light" color="gray">Dibs used</Badge>
+    const used = mine[seasonId] && !mine[seasonId].hasDibs;
+    return (
+      <Badge size="xs" variant="light" color={used ? 'gray' : 'grape'}>
+        {used ? 'Dibs used' : 'Dibs available'}
+      </Badge>
     );
   };
 
   if (!data) return null;
-  if (data.seasons.length === 0) return <Text c="dimmed">No seasons yet.</Text>;
+  if (data.seasons.length === 0) return <EmptyState icon={<IconMoodEmpty size={26} />} text="No seasons yet. The loot officer hasn't set one up." />;
 
   return (
     <Stack gap="lg">
-      {data.seasons.map((season) => (
-        <SectionCard key={season.id} title={season.name} right={dibsBadge(season.id)}>
-          <Stack gap={4}>
-            {data.sessions
-              .filter((s) => s.season_id === season.id)
-              .map((s) => (
-                <Group key={s.id} justify="space-between">
-                  <Anchor component={Link} to={`/s/${s.id}`}>
-                    {s.name}
-                  </Anchor>
-                  <Badge variant="light" size="sm" color={s.status === 'closed' ? 'gray' : 'blue'}>
-                    {s.status}
+      {data.seasons.map((season) => {
+        const raid = raidById(season.raid_id);
+        const sessions = data.sessions.filter((s) => s.season_id === season.id);
+        return (
+          <SectionCard
+            key={season.id}
+            title={season.name}
+            right={
+              <Group gap="xs">
+                {raid && (
+                  <Badge size="xs" variant="outline" color="teal">
+                    {raid.name}
                   </Badge>
-                </Group>
+                )}
+                {dibsBadge(season.id)}
+              </Group>
+            }
+          >
+            <Stack gap={6}>
+              {sessions.map((s) => (
+                <Anchor key={s.id} component={Link} to={`/s/${s.id}`} underline="never" c="inherit">
+                  <Group
+                    justify="space-between"
+                    px="sm"
+                    py={6}
+                    style={{ borderRadius: 8, border: '1px solid var(--mantine-color-dark-5)', background: 'var(--mantine-color-dark-6)' }}
+                  >
+                    <Text size="sm" fw={600}>
+                      {s.name}
+                    </Text>
+                    <Group gap="xs">
+                      <StatusBadge status={s.status} size="xs" />
+                      <IconChevronRight size={16} color="var(--mantine-color-teal-4)" />
+                    </Group>
+                  </Group>
+                </Anchor>
               ))}
-            {data.sessions.every((s) => s.season_id !== season.id) && (
-              <Text size="sm" c="dimmed">
-                No sessions yet.
-              </Text>
-            )}
-          </Stack>
-        </SectionCard>
-      ))}
+              {sessions.length === 0 && (
+                <Text size="sm" c="dimmed">
+                  No sessions yet.
+                </Text>
+              )}
+            </Stack>
+          </SectionCard>
+        );
+      })}
     </Stack>
   );
 }

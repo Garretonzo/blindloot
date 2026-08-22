@@ -1,4 +1,5 @@
-import { Badge, Button, Checkbox, Group, Progress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
+import { Badge, Button, Checkbox, Group, RingProgress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
+import { IconCheck, IconDice5, IconTrophy } from '@tabler/icons-react';
 import { SectionCard } from './SectionCard';
 import { Boss, canDibs, LiveState, Raider, Tier, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
 import { TierBadge } from './TierBadge';
@@ -66,8 +67,16 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
       <SectionCard title="Ready check" right={<Text size="xs" c="dimmed">{live.readyRaiderIds.length} / {raiders.length} ready</Text>}>
         <Stack align="center" gap="sm">
           {me && (
-            <Button onClick={onReady} disabled={isReady} variant={isReady ? 'light' : 'filled'}>
-              {isReady ? 'Ready ✓' : "I'm ready"}
+            <Button
+              size="lg"
+              onClick={onReady}
+              disabled={isReady}
+              color={isReady ? 'green' : 'teal'}
+              variant={isReady ? 'light' : 'filled'}
+              className={isReady ? undefined : 'pulse'}
+              leftSection={isReady ? <IconCheck size={20} /> : undefined}
+            >
+              {isReady ? 'Ready' : "I'm ready"}
             </Button>
           )}
           {!me && (
@@ -90,6 +99,8 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
   const boss = bosses.find((b) => b.items.some((i) => i.id === itemId));
   const item = boss?.items.find((i) => i.id === itemId);
   const total = live.phase === 'item' ? live.itemSeconds : live.resultSeconds;
+  // Ring colour: teal → yellow in the last 5 s → red in the last 2 s; yellow while paused; gray for results.
+  const ringColor = live.paused ? 'yellow' : live.phase === 'results' ? 'gray' : seconds <= 2 ? 'red' : seconds <= 5 ? 'yellow' : 'teal';
   const header = (
     <Group justify="space-between" wrap="nowrap">
       <Group gap="sm" wrap="nowrap">
@@ -106,10 +117,18 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
           </Text>
         </div>
       </Group>
-      <Text size="xl" fw={700} ff="monospace" c={live.paused ? 'yellow' : undefined}>
-        {live.paused ? '⏸ ' : ''}
-        {Math.ceil(seconds)}
-      </Text>
+      <RingProgress
+        size={84}
+        thickness={6}
+        roundCaps
+        sections={[{ value: (seconds / total) * 100, color: ringColor }]}
+        transitionDuration={100}
+        label={
+          <Text ta="center" size="xl" fw={700} ff="monospace" c={live.paused ? 'yellow' : ringColor === 'teal' ? undefined : ringColor}>
+            {live.paused ? '⏸' : Math.ceil(seconds)}
+          </Text>
+        }
+      />
     </Group>
   );
 
@@ -130,7 +149,6 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
       >
         <Stack gap="sm">
           {header}
-          <Progress value={(seconds / total) * 100} size="sm" transitionDuration={100} />
           {adminControls && <AdminBar live={live} controls={adminControls} />}
           {me ? (
             <SimpleGrid cols={{ base: 2, xs: 4 }}>
@@ -145,7 +163,8 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
                     disabled={disabled}
                     title={TIER_HINT[t]}
                     onClick={() => onChoose(selected ? null : t)}
-                    style={selected ? { boxShadow: '0 0 0 3px var(--mantine-color-yellow-5)' } : undefined}
+                    size="md"
+                    style={selected ? { boxShadow: `0 0 0 3px var(--mantine-color-${TIER_COLOR[t]}-3), 0 0 18px var(--mantine-color-${TIER_COLOR[t]}-6)` } : undefined}
                   >
                     {selected ? '✓ ' : ''}
                     {TIER_LABEL[t]}
@@ -166,9 +185,9 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
           {me && (!me.need_available || !canDibs(me)) && (
             <Text size="xs" ta="center" c="dimmed">
               {me.dibs_locked
-                ? 'You won with Need this session — Need and Dibs are locked until next session.'
+                ? 'You already won with Need this week (this difficulty). Need and Dibs are locked until next week or difficulty.'
                 : !me.need_available && !me.has_dibs
-                  ? 'You won with Dibs — Need is locked for this session.'
+                  ? 'You already won with Dib this week (this difficulty). Need is locked until next week or difficulty.'
                   : !me.need_available
                     ? 'Need already used this session.'
                     : 'Dibs already used this season.'}
@@ -185,16 +204,20 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
     <SectionCard title="Result" right={pausedBadge}>
       <Stack gap="sm">
         {header}
-        <Progress value={(seconds / total) * 100} size="sm" color="gray" transitionDuration={100} />
         {adminControls && <AdminBar live={live} controls={adminControls} />}
         {res && res.winnerId != null ? (
-          <Text ta="center" fw={700} size="lg">
-            {res.winnerName} {res.winTier && <TierBadge tier={res.winTier} size="md" />}
-          </Text>
+          <Group justify="center" gap="sm" className="pop" key={res.itemId}>
+            <IconTrophy size={26} color="var(--mantine-color-yellow-4)" />
+            <Text fw={800} fz={24} className="brand">
+              {res.winnerName}
+            </Text>
+            {res.winTier && <TierBadge tier={res.winTier} size="md" />}
+          </Group>
         ) : (
-          <Text ta="center" c="dimmed">
-            Nobody rolled.
-          </Text>
+          <Group justify="center" gap="xs" className="pop" key={res?.itemId ?? 'none'}>
+            <IconDice5 size={22} color="var(--mantine-color-dark-2)" />
+            <Text c="dimmed">Nobody rolled. It stays in the bag.</Text>
+          </Group>
         )}
         {res && res.entries.length > 0 && (
           <Table verticalSpacing={2} withRowBorders={false}>
