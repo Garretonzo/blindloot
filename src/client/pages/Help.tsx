@@ -139,6 +139,10 @@ export function HelpPage() {
               the order is random, you don't get to choose which one goes first. If one matters more, maybe pick Need on that one only. The risk is yours.
             </Accordion.Panel>
           </Accordion.Item>
+          <Accordion.Item value="alone">
+            <Accordion.Control>What if nobody else used a Need or Dibs on the item I used mine on?</Accordion.Control>
+            <Accordion.Panel>You'll never know. And you will spend that roll regardless.</Accordion.Panel>
+          </Accordion.Item>
           <Accordion.Item value="order">
             <Accordion.Control>What order are items rolled in?</Accordion.Control>
             <Accordion.Panel>
