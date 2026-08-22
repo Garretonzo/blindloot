@@ -46,8 +46,7 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
     <Stack gap="sm">
       {canPlan && (
         <Text size="xs" c="dimmed">
-          <b>Decide now, not when everyone's watching.</b> Pre-pick what you'd roll on each upcoming item; it pre-fills when the item comes up
-          and you can still change it during the countdown.{' '}
+          <b>Pick your roll on each item below.</b> Nobody sees it; you can change it until the item is resolved.{' '}
           <Anchor component={Link} to="/help" size="xs">
             How it works
           </Anchor>

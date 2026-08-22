@@ -39,7 +39,7 @@ export function HelpPage() {
             <b>Results show who won, not how.</b> Only the loot officer sees tiers and dice.
           </List.Item>
           <List.Item>
-            <b>Your pre-picks are private</b> and pre-fill your roll, so you decide what an item is worth to you before the pressure's on.
+            <b>Your pre-picks are private and they are the roll</b>, so you decide what an item is worth to you before the pressure's on.
           </List.Item>
           <List.Item>
             <b>Need and Dibs only cost you when you win.</b> Same rules for everyone, every week.
@@ -83,20 +83,30 @@ export function HelpPage() {
       <SectionCard title="Raid night, step by step">
         <List type="ordered" size="sm" spacing="xs">
           <List.Item>
-            Open the session and enter your item level. Your real one — it's shown to everyone and it decides Dibs ties. (The loot officer
-            can also add you or fix it.)
+            <b>In game, everyone passes on everything.</b> The loot officer picks it all up. Nothing gets rolled in the game client.
+          </List.Item>
+          <List.Item>
+            Open the session here and enter your item level. Your real one — it's shown to everyone and it decides Dibs ties. (The loot
+            officer can also add you or fix it.)
           </List.Item>
           <List.Item>As bosses die, the loot officer adds them and what dropped. The list updates live.</List.Item>
           <List.Item>
-            Optional but smart: next to each upcoming item, pre-pick what you'd roll. It pre-fills when the item comes up; you can still change
-            it during the countdown.
-          </List.Item>
-          <List.Item>When loot's done, everyone gets a ready check. Click the big button.</List.Item>
-          <List.Item>
-            Items come up one at a time: countdown, pick your roll, result for a few seconds. The loot officer starts each one.
+            <b>As loot shows up, pre-pick your roll on every item you want.</b> This is not optional. This is the roll. Nobody sees your picks,
+            you can change them until the item is resolved, and when the batch runs, no pick means no roll.
           </List.Item>
           <List.Item>
-            Multi-night raid? The session stays open. Next night, more loot gets added and rolled, with the same Need/Dibs state.
+            When loot's done, the loot officer <b>runs the batch</b>: the site resolves every item from everyone's picks in one go — same
+            dice, same Need/Dibs demotion between items — and posts the results. No countdowns, no waiting. <b>Items are resolved in a
+            random order</b>, so "first on the list" means nothing: if you pre-pick Need on three items, any of them could be the one that
+            spends it.
+          </List.Item>
+          <List.Item>
+            Sometimes the officer runs a <b>live roll-off</b> instead: ready check, then items one at a time with a countdown. Your pre-picks
+            pre-fill each roll and you can still change them during the countdown. Whether that happens is the officer's call, so don't
+            bank on it — pick ahead either way.
+          </List.Item>
+          <List.Item>
+            Multi-night raid? The session stays open. Next night, more loot gets added and resolved, with the same Need/Dibs state.
           </List.Item>
         </List>
       </SectionCard>
@@ -115,9 +125,17 @@ export function HelpPage() {
             <Accordion.Panel>Yes. Click another type, or click the selected one again to withdraw. Only what's selected at zero counts.</Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="planned">
-            <Accordion.Control>I pre-picked Need on two items. What if I win the first?</Accordion.Control>
+            <Accordion.Control>I pre-picked Need on two items. What if I win one?</Accordion.Control>
             <Accordion.Panel>
-              The second one drops a step automatically (Need → Equip, Dibs → Need). You can't roll with something you no longer have.
+              The other drops a step automatically (Need → Equip, Dibs → Need). You can't roll with something you no longer have. And since
+              the order is random, you don't get to choose which one goes first — if one matters more, maybe pick Need on that one only. The risk is yours.
+            </Accordion.Panel>
+          </Accordion.Item>
+          <Accordion.Item value="order">
+            <Accordion.Control>What order are items rolled in?</Accordion.Control>
+            <Accordion.Panel>
+              Random, by default, for both the batch and the live roll-off. The loot officer can switch it to list order, but assume
+              random. During a live roll-off the list shows a #n badge with the actual order.
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="tab">
@@ -141,11 +159,11 @@ export function HelpPage() {
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="batch">
-            <Accordion.Control>What's an “instant batch”?</Accordion.Control>
+            <Accordion.Control>Batch vs. live roll-off — what's the difference?</Accordion.Control>
             <Accordion.Panel>
-              Instead of a live countdown per item, the loot officer can resolve everything at once from your pre-picks — same rules, same
-              dice, same Need/Dibs demotion between items, just no waiting. If you haven't pre-picked an item, you're not rolling on it. So
-              set your picks.
+              Same rules, same dice, same Need/Dibs demotion between items. The batch resolves everything at once from pre-picks — no
+              pick, no roll. The live roll-off does it one item at a time with a countdown; your pre-pick pre-fills the roll, but you can
+              change it or roll fresh during the countdown. The officer decides which happens, so pre-pick as if it'll be the batch.
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="give">

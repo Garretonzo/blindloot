@@ -30,7 +30,7 @@ const initialState = (): LiveState => ({
   choices: {},
   choiceCount: 0,
   lastResult: null,
-  shuffle: false,
+  shuffle: true,
   batchResults: null,
   revision: 0,
 });

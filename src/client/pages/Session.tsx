@@ -99,13 +99,15 @@ export function SessionPage() {
         </Alert>
         {me && detail.session.status === 'open' && unresolved.size > 0 && (
           <Text size="xs" c="dimmed" mb="sm">
-            Heads up: the loot officer may run an <b>instant batch</b> straight from pre-picks — no countdown, no second chance. Set yours.
+            <b>Your pre-picks are your rolls.</b> When loot's done the officer resolves everything from them in one go
+            {live?.shuffle !== false ? ', in random order' : ', in list order'}. No pick, no roll.
           </Text>
         )}
         {me && bigPlans.length > 1 && (
           <Alert variant="light" color="red" mb="md" title={`You're pre-picking Need/Dibs on ${bigPlans.length} items`}>
             You only get one big win. The moment you <b>win</b> one with Need or Dibs, every other Need/Dibs you've pre-picked drops to{' '}
-            <b>Equip</b> automatically. Pre-picking several is fine — it just means "whichever comes first".
+            <b>Equip</b> automatically. Pre-picking several is fine — it just means "whichever comes first"
+            {live?.shuffle !== false ? ', and the order is random' : ''}. If one of them matters more, Need that one only.
           </Alert>
         )}
         <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} me={me} plans={plans} onPlan={me ? setPlan : undefined} />

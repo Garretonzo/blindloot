@@ -186,7 +186,7 @@ export function AdminSessionPage() {
             <Checkbox
               size="xs"
               label="Randomize item order (live roll-off and instant batch)"
-              checked={live?.shuffle ?? false}
+              checked={live?.shuffle ?? true}
               onChange={(e) => send({ type: 'setShuffle', value: e.currentTarget.checked })}
             />
             {phase === 'open' && picks && pendingCount > 0 && (

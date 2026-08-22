@@ -99,10 +99,12 @@ Add → Custom domain**. Cloudflare creates the DNS record and certificate. Opti
    Inside a session the admin picks raiders from that roster (dropdown) and sets their item level
    for *this* session; ilvl is per session, Dibs per season. When a raider later opens the site
    and types the same name (case doesn't matter) they get that record, history and Dibs included.
-5. Admin clicks **Stage rolling** → raiders get a ready check; once everyone is ready (or admin
-   forces **Start now**) the first item is shown **paused**.
-6. Admin presses **Start countdown**: 15 s to pick a tier, then 5 s of results, then the next item
-   (both durations are adjustable in the Controls card; they apply to the next countdown).
+5. Raiders pre-pick their roll on each item as loot is added — this is the primary way of rolling.
+   When loot is done the admin clicks **Run instant batch** and every item is resolved from the
+   pre-picks at once (optionally in random order). Results are shown to everyone.
+6. Alternative, live mode: admin clicks **Stage rolling** → ready check → the first item is shown
+   **paused**; **Start countdown** gives 15 s to pick a tier (pre-picks pre-fill), then 5 s of
+   results, then the next item (durations adjustable in the Controls card).
    - **Pause / Resume** freezes and continues either countdown (roll or result) at any point.
    - **Skip** ends the current countdown immediately.
    - **Auto-continue** is off by default: after each result the next item waits for
@@ -110,10 +112,8 @@ Add → Custom domain**. Cloudflare creates the DNS record and certificate. Opti
 7. When every pending item is rolled the session goes back to *open*: add more bosses/items
    (e.g. the next raid night) and stage another roll-off — only unrolled items are included.
 8. **Close session** when the raid is fully done (no more joins/edits); **Reopen** if needed.
-9. Two options in the Controls card: **Randomize item order** (applies to the live roll-off and to
-   batches), and **Run instant batch** — resolves every unrolled item immediately from raiders'
-   pre-picks (same rules and demotion between items, no countdowns) and shows the results to
-   everyone; raiders only see who won, the admin also sees tiers and rolls.
+9. **Randomize item order** (on by default) in the Controls card applies to both batch and live
+   modes. Batch results show raiders who won; the admin also sees tiers and every roll.
 
 Also:
 - `/help` ("How it works", linked from the header and the name picker) explains the roll types,
