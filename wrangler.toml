@@ -1,7 +1,8 @@
-name = "loot"
+name = "blindloot"
 main = "src/worker/index.ts"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
 
 [assets]
 directory = "dist/client"
@@ -10,8 +11,8 @@ binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "loot"
-database_id = "REPLACE_WITH_OUTPUT_OF_wrangler_d1_create"
+database_name = "blindloot"
+database_id = "216f1fce-c594-446f-b740-4c6b37655e58"
 migrations_dir = "migrations"
 
 [[durable_objects.bindings]]
@@ -22,10 +23,7 @@ class_name = "SessionDO"
 name = "PRESENCE"
 class_name = "PresenceDO"
 
+# SQLite-backed Durable Objects (available on the free Workers plan).
 [[migrations]]
 tag = "v1"
-new_classes = ["SessionDO"]
-
-[[migrations]]
-tag = "v2"
-new_classes = ["PresenceDO"]
+new_sqlite_classes = ["SessionDO", "PresenceDO"]

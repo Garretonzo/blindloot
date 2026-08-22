@@ -55,13 +55,16 @@ in `src/shared/raids/index.ts` (`RAIDS`) — it then appears in the "New season"
 
 ```sh
 npx wrangler login
-npx wrangler d1 create loot          # paste database_id into wrangler.toml
-npm run db:migrate
+npx wrangler d1 create blindloot     # paste database_id into wrangler.toml (first time only)
+npm run db:migrate                   # apply migrations to the remote DB
 npx wrangler secret put ADMIN_PASSWORD
 npx wrangler secret put SUPER_ADMIN_PASSWORD   # optional; enables deleting seasons/sessions
 npx wrangler secret put SITE_PASSWORD          # what raiders enter before picking their name
-npm run deploy
+npm run deploy                       # builds the client and publishes worker + assets + DOs
 ```
+
+The worker is `blindloot`; it uses SQLite-backed Durable Objects, which work on the free plan.
+After the first deploy it is reachable at `https://blindloot.<your-subdomain>.workers.dev`.
 
 `SITE_PASSWORD` gates the whole raider-facing site (and its API): visitors enter it once per
 browser, before the name picker. Admins bypass it with their own login. Leave it unset to run
@@ -71,8 +74,10 @@ Both passwords are entered on the same `/admin` login form. There is no link to 
 raider-facing pages — admins go to `/admin` directly. A normal admin can create and edit
 everything; only the super admin can delete seasons and sessions (with all their history).
 
-Then in the Cloudflare dashboard: Workers & Pages → `loot` → Settings → Domains & Routes →
-add your custom domain.
+Custom domain: buy one under **Domain Registration → Register Domains** (or use a subdomain of a
+domain already on the account), then **Workers & Pages → blindloot → Settings → Domains & Routes →
+Add → Custom domain**. Cloudflare creates the DNS record and certificate. Optionally disable the
+`workers.dev` route there so the domain is the only entrance.
 
 ## Flow
 
