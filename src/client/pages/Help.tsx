@@ -10,7 +10,7 @@ export function HelpPage() {
     <Stack gap="lg">
       <Title order={3}>How this works (read it once)</Title>
 
-      <SectionCard title="Why “just fucking roll”?">
+      {/* <SectionCard title="Why “just fucking roll”?">
         <Text size="sm" mb="xs">
           Loot drama never came from the loot. It came from people playing each other instead of rolling honestly. You know the moves:
         </Text>
@@ -48,7 +48,7 @@ export function HelpPage() {
         <Text size="sm" fw={600} mt="sm">
           Roll what it's worth to you. Nobody can see. Just fucking roll.
         </Text>
-      </SectionCard>
+      </SectionCard> */}
 
       <SectionCard title="Roll types">
         <Text size="sm" c="dimmed" mb="sm">

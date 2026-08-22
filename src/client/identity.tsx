@@ -73,7 +73,7 @@ export function NamePrompt() {
   };
 
   return (
-    <GateCard title="Who the hell are you?" tagline="Blind loot. Zero drama. Just fucking roll.">
+    <GateCard title="Who the hell are you?" tagline="Blind roll loot distributor.">
         <Stack gap="xs">
           <Select
             label="Your name"

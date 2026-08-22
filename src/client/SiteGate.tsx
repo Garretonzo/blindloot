@@ -37,7 +37,7 @@ export function SiteGate({ children }: { children: ReactNode }) {
   if (ok) return <>{children}</>;
 
   return (
-    <GateCard title="Site password" tagline="Blind loot. Zero drama. Just fucking roll.">
+    <GateCard title="Site password" tagline="Blind roll loot distributor.">
         <Stack gap="xs">
           <PasswordInput
             label="Password"
