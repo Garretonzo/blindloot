@@ -1,0 +1,248 @@
+import { Anchor, Badge, Button, Checkbox, Group, NumberInput, Select, Stack, Text, Title } from '@mantine/core';
+import { SectionCard, SubHeader } from '../components/SectionCard';
+import { notifications } from '@mantine/notifications';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { api, RosterRaider } from '../api';
+import { RollEntry, SessionDetail } from '../../shared/types';
+import { useSessionSocket } from '../useSessionSocket';
+import { useRequireAdmin } from './Admin';
+import { ItemList } from '../components/ItemList';
+import { RaiderTable } from '../components/RaiderTable';
+import { RollPanel } from '../components/RollPanel';
+import { BossForm } from '../components/BossForm';
+
+/** Add a raider from the site-wide roster to this session, with this session's item level. */
+function AddRaiderRow({ inSession, onAdd }: { inSession: number[]; onAdd: (raiderId: number, itemLevel: number) => Promise<unknown> }) {
+  const [roster, setRoster] = useState<RosterRaider[]>([]);
+  const [raiderId, setRaiderId] = useState<string | null>(null);
+  const [ilvl, setIlvl] = useState<number | string>('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    api.admin.raiders().then(setRoster).catch(() => {});
+  }, [inSession.length]);
+
+  const available = roster.filter((r) => !inSession.includes(r.id));
+  const submit = async () => {
+    if (!raiderId) return;
+    setBusy(true);
+    try {
+      await onAdd(Number(raiderId), Number(ilvl) || 0);
+      setRaiderId(null);
+      setIlvl('');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Group gap="xs" mt="sm" align="flex-end" wrap="nowrap">
+      <Select
+        size="xs"
+        style={{ flex: 1 }}
+        label={
+          <>
+            Add raider{' '}
+            <Anchor component={Link} to="/admin" size="xs">
+              (manage roster)
+            </Anchor>
+          </>
+        }
+        placeholder={available.length ? 'Pick from the roster' : 'Everyone on the roster is already here'}
+        data={available.map((r) => ({ value: String(r.id), label: r.username }))}
+        value={raiderId}
+        onChange={setRaiderId}
+        searchable
+        nothingFoundMessage="No such raider — add them on the Admin page"
+      />
+      <NumberInput size="xs" w={90} label="ilvl" value={ilvl} min={0} allowDecimal={false} onChange={setIlvl} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+      <Button size="xs" onClick={submit} loading={busy} disabled={!raiderId}>
+        Add
+      </Button>
+    </Group>
+  );
+}
+
+export function AdminSessionPage() {
+  const { ok } = useRequireAdmin();
+  const sessionId = Number(useParams().sessionId);
+  const [detail, setDetail] = useState<SessionDetail | null>(null);
+  const [rolls, setRolls] = useState<Record<number, RollEntry[]>>({});
+  const { state: live, connected, send } = useSessionSocket(sessionId, null);
+
+  const refresh = useCallback(() => {
+    api.session(sessionId).then(setDetail).catch(() => setDetail(null));
+    api.admin.rolls(sessionId).then(setRolls).catch(() => {});
+  }, [sessionId]);
+  useEffect(() => {
+    if (ok) refresh();
+  }, [ok, refresh, live?.revision]);
+
+  if (!ok || !detail) return null;
+
+  const pendingCount = detail.bosses.flatMap((b) => b.items).filter((i) => i.resolved_at == null).length;
+
+  const run =(p: Promise<unknown>) =>
+    p.then(refresh).catch((e: Error) => notifications.show({ color: 'red', message: e.message }));
+
+  const phase = live?.phase ?? 'open';
+  const rolling = phase === 'item' || phase === 'results';
+  const paused = !!live?.paused;
+  const editable = phase === 'open' || phase === 'ready';
+
+  return (
+    <Stack gap="lg">
+      <Group justify="space-between">
+        <div>
+          <Text size="xs" c="dimmed">
+            {detail.season.name} ·{' '}
+            <Anchor component={Link} to={`/s/${sessionId}`} size="xs">
+              raider view
+            </Anchor>
+          </Text>
+          <Title order={3}>{detail.session.name}</Title>
+        </div>
+        <Badge variant="light" color={connected ? 'green' : 'red'} size="sm">
+          {connected ? 'live' : 'offline'}
+        </Badge>
+      </Group>
+
+      <SectionCard
+        title="Controls"
+        right={
+          <Badge size="xs" variant="light" color={paused ? 'yellow' : phase === 'closed' ? 'gray' : 'blue'}>
+            {paused ? 'paused' : phase}
+          </Badge>
+        }
+      >
+        <Group>
+          {phase === 'open' && (
+            <>
+              <Button onClick={() => send({ type: 'stage' })} disabled={detail.raiders.length === 0 || pendingCount === 0}>
+                Stage rolling (ready check)
+              </Button>
+              <Button variant="default" onClick={() => confirm('Close this session? Raiders can no longer join.') && send({ type: 'close' })}>
+                Close session
+              </Button>
+            </>
+          )}
+          {phase === 'closed' && (
+            <Button variant="default" onClick={() => send({ type: 'reopen' })}>
+              Reopen session
+            </Button>
+          )}
+          {phase === 'ready' && (
+            <Button onClick={() => send({ type: 'start' })}>
+              Start now ({live?.readyRaiderIds.length ?? 0}/{detail.raiders.length} ready)
+            </Button>
+          )}
+          {rolling && (
+            <Text size="sm" c="dimmed">
+              Pause / Skip / Auto-continue are in the live card above.
+            </Text>
+          )}
+          {(rolling || phase === 'ready') && (
+            <Button
+              variant="subtle"
+              color="red"
+              onClick={() => confirm('Reset live state? Already-resolved items keep their winners.') && send({ type: 'reset' })}
+            >
+              Reset
+            </Button>
+          )}
+        </Group>
+        {(phase === 'ready' || phase === 'open') && (
+          <Checkbox
+            mt="sm"
+            size="xs"
+            label="Auto-continue (untick to stop after every item until you press Start next item)"
+            checked={live?.autoContinue ?? false}
+            onChange={(e) => send({ type: 'setAutoContinue', value: e.currentTarget.checked })}
+          />
+        )}
+        {phase !== 'closed' && live && (
+          <Group mt="sm" gap="md" align="flex-end">
+            <NumberInput
+              size="xs"
+              w={140}
+              label="Roll countdown (s)"
+              min={1}
+              max={600}
+              allowDecimal={false}
+              value={live.itemSeconds}
+              onChange={(v) => typeof v === 'number' && v >= 1 && send({ type: 'setTimers', itemSeconds: v })}
+            />
+            <NumberInput
+              size="xs"
+              w={140}
+              label="Results display (s)"
+              min={1}
+              max={600}
+              allowDecimal={false}
+              value={live.resultSeconds}
+              onChange={(v) => typeof v === 'number' && v >= 1 && send({ type: 'setTimers', resultSeconds: v })}
+            />
+            <Text size="xs" c="dimmed">
+              Applies to the next countdown.
+            </Text>
+          </Group>
+        )}
+        {phase === 'open' && (
+          <Text size="xs" c="dimmed" mt="xs">
+            {pendingCount} item{pendingCount === 1 ? '' : 's'} waiting to be rolled.
+          </Text>
+        )}
+      </SectionCard>
+
+      {live && (
+        <RollPanel
+          live={live}
+          bosses={detail.bosses}
+          raiders={detail.raiders}
+          me={null}
+          onChoose={() => {}}
+          onReady={() => {}}
+          adminControls={{
+            onPause: () => send({ type: 'pause' }),
+            onResume: () => send({ type: 'resume' }),
+            onSkip: () => send({ type: 'next' }),
+            onSetAutoContinue: (value) => send({ type: 'setAutoContinue', value }),
+          }}
+        />
+      )}
+
+      <SectionCard title="Loot">
+        <ItemList
+          bosses={detail.bosses}
+          raiders={detail.raiders}
+          live={live}
+          raidId={detail.season.raid_id}
+          showTiers
+          rolls={rolls}
+          onAward={(itemId, raiderId, tier) => run(api.admin.award(sessionId, itemId, raiderId, tier))}
+          onAddItem={editable ? (bossId, name, icon) => run(api.admin.addItem(sessionId, bossId, name, icon)) as Promise<void> : undefined}
+          onDeleteItem={editable ? (id) => run(api.admin.deleteItem(sessionId, id)) : undefined}
+          onDeleteBoss={editable ? (id) => confirm('Remove this boss and its items?') && run(api.admin.deleteBoss(sessionId, id)) : undefined}
+        />
+        {editable && (
+          <>
+            <SubHeader>Add boss</SubHeader>
+            <BossForm raidId={detail.season.raid_id} onSubmit={(name, icon, items) => run(api.admin.addBoss(sessionId, name, icon, items)) as Promise<void>} />
+          </>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Raiders" right={<Text size="xs" c="dimmed">{detail.raiders.length} joined</Text>}>
+        <RaiderTable
+          raiders={detail.raiders}
+          editable={phase !== 'closed'}
+          readyIds={phase === 'ready' ? live?.readyRaiderIds : undefined}
+          onUpdate={(id, patch) => run(api.admin.updateRaider(sessionId, id, patch))}
+          onRemove={(id) => confirm('Remove this raider from the session?') && run(api.admin.removeRaider(sessionId, id))}
+        />
+        {phase !== 'closed' && (
+          <AddRaiderRow inSession={detail.raiders.map((r) => r.id)} onAdd={(rid, ilvl) => run(api.admin.addRaider(sessionId, rid, ilvl))} />
+        )}
+      </SectionCard>
+    </Stack>
+  );
+}

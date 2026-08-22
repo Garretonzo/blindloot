@@ -1,0 +1,227 @@
+import { Badge, Button, Checkbox, Group, Progress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
+import { SectionCard } from './SectionCard';
+import { Boss, canDibs, LiveState, Raider, Tier, TIER_COLOR, TIER_LABEL } from '../../shared/types';
+import { TierBadge } from './TierBadge';
+import { Icon } from './Icon';
+import { useCountdown } from '../useSessionSocket';
+
+export interface AdminControls {
+  onPause: () => void;
+  onResume: () => void;
+  onSkip: () => void;
+  onSetAutoContinue: (value: boolean) => void;
+}
+
+interface Props {
+  live: LiveState;
+  bosses: Boss[];
+  raiders: Raider[];
+  me: Raider | null;
+  onChoose: (tier: Tier | null) => void;
+  onReady: () => void;
+  /** When provided (admin page) pause/skip/auto-continue controls render inside the live card. */
+  adminControls?: AdminControls;
+}
+
+const TIERS: Tier[] = ['greed', 'equip', 'need', 'dibs'];
+
+/** Pause / Resume / Skip / Auto-continue row shown to the admin during both countdowns. */
+function AdminBar({ live, controls }: { live: LiveState; controls: AdminControls }) {
+  const fresh = live.paused && live.phase === 'item' && live.pausedRemainingMs === live.itemSeconds * 1000;
+  const label = !fresh ? 'Resume' : live.currentIndex === 0 ? 'Start countdown' : 'Start next item';
+  return (
+    <Group justify="space-between" align="center">
+      <Group gap="xs">
+        {live.paused ? (
+          <Button color="green" onClick={controls.onResume}>
+            {label}
+          </Button>
+        ) : (
+          <Button color="yellow" onClick={controls.onPause}>
+            Pause
+          </Button>
+        )}
+        <Button variant="default" onClick={controls.onSkip}>
+          Skip
+        </Button>
+      </Group>
+      <Checkbox
+        size="xs"
+        label="Auto-continue"
+        checked={live.autoContinue}
+        onChange={(e) => controls.onSetAutoContinue(e.currentTarget.checked)}
+      />
+    </Group>
+  );
+}
+
+export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminControls }: Props) {
+  const seconds = useCountdown(live.deadline, live.pausedRemainingMs);
+
+  if (live.phase === 'open' || live.phase === 'closed') return null;
+
+  if (live.phase === 'ready') {
+    const isReady = me != null && live.readyRaiderIds.includes(me.id);
+    return (
+      <SectionCard title="Ready check" right={<Text size="xs" c="dimmed">{live.readyRaiderIds.length} / {raiders.length} ready</Text>}>
+        <Stack align="center" gap="sm">
+          {me && (
+            <Button onClick={onReady} disabled={isReady} variant={isReady ? 'light' : 'filled'}>
+              {isReady ? 'Ready ✓' : "I'm ready"}
+            </Button>
+          )}
+          {!me && (
+            <Text size="sm" c="dimmed">
+              Waiting for raiders…
+            </Text>
+          )}
+        </Stack>
+      </SectionCard>
+    );
+  }
+
+  const pausedBadge = live.paused ? (
+    <Badge size="xs" color="yellow" variant="filled">
+      paused
+    </Badge>
+  ) : null;
+
+  const itemId = live.itemIds[live.currentIndex];
+  const boss = bosses.find((b) => b.items.some((i) => i.id === itemId));
+  const item = boss?.items.find((i) => i.id === itemId);
+  const total = live.phase === 'item' ? live.itemSeconds : live.resultSeconds;
+  const header = (
+    <Group justify="space-between" wrap="nowrap">
+      <Group gap="sm" wrap="nowrap">
+        <Icon src={item?.icon} size="lg" alt={item?.name} />
+        <div>
+          <Group gap={6}>
+            <Icon src={boss?.icon} size="xs" />
+            <Text size="xs" c="dimmed">
+              {live.currentIndex + 1} / {live.itemIds.length} · {boss?.name ?? live.lastResult?.bossName}
+            </Text>
+          </Group>
+          <Text fw={700} size="lg">
+            {item?.name ?? live.lastResult?.itemName}
+          </Text>
+        </div>
+      </Group>
+      <Text size="xl" fw={700} ff="monospace" c={live.paused ? 'yellow' : undefined}>
+        {live.paused ? '⏸ ' : ''}
+        {Math.ceil(seconds)}
+      </Text>
+    </Group>
+  );
+
+  if (live.phase === 'item') {
+    const mine = me ? live.choices[me.id] : undefined;
+    const count = live.choiceCount;
+    return (
+      <SectionCard
+        title="Rolling"
+        right={
+          <Group gap="xs">
+            {pausedBadge}
+            <Text size="xs" c="dimmed">
+              {count} rolled
+            </Text>
+          </Group>
+        }
+      >
+        <Stack gap="sm">
+          {header}
+          <Progress value={(seconds / total) * 100} size="sm" transitionDuration={100} />
+          {adminControls && <AdminBar live={live} controls={adminControls} />}
+          {me ? (
+            <SimpleGrid cols={{ base: 2, xs: 4 }}>
+              {TIERS.map((t) => {
+                const disabled = (t === 'need' && !me.need_available) || (t === 'dibs' && !canDibs(me));
+                const selected = mine === t;
+                return (
+                  <Button
+                    key={t}
+                    color={TIER_COLOR[t]}
+                    variant={selected ? 'filled' : 'outline'}
+                    disabled={disabled}
+                    onClick={() => onChoose(selected ? null : t)}
+                    style={selected ? { boxShadow: '0 0 0 3px var(--mantine-color-yellow-5)' } : undefined}
+                  >
+                    {selected ? '✓ ' : ''}
+                    {TIER_LABEL[t]}
+                  </Button>
+                );
+              })}
+            </SimpleGrid>
+          ) : (
+            <Text size="sm" c="dimmed">
+              Join the session to roll.
+            </Text>
+          )}
+          {me && (
+            <Text size="sm" ta="center" c={mine ? TIER_COLOR[mine] : 'dimmed'} fw={mine ? 600 : 400}>
+              {mine ? `You chose: ${TIER_LABEL[mine]}` : 'You have not rolled yet'}
+            </Text>
+          )}
+          {me && (!me.need_available || !canDibs(me)) && (
+            <Text size="xs" ta="center" c="dimmed">
+              {me.dibs_locked
+                ? 'You won with Need this session — Need and Dibs are locked until next session.'
+                : !me.need_available && !me.has_dibs
+                  ? 'You won with Dibs — Need is locked for this session.'
+                  : !me.need_available
+                    ? 'Need already used this session.'
+                    : 'Dibs already used this season.'}
+            </Text>
+          )}
+        </Stack>
+      </SectionCard>
+    );
+  }
+
+  // results
+  const res = live.lastResult;
+  return (
+    <SectionCard title="Result" right={pausedBadge}>
+      <Stack gap="sm">
+        {header}
+        <Progress value={(seconds / total) * 100} size="sm" color="gray" transitionDuration={100} />
+        {adminControls && <AdminBar live={live} controls={adminControls} />}
+        {res && res.winnerId != null ? (
+          <Text ta="center" fw={700} size="lg">
+            {res.winnerName} {res.winTier && <TierBadge tier={res.winTier} size="md" />}
+          </Text>
+        ) : (
+          <Text ta="center" c="dimmed">
+            Nobody rolled.
+          </Text>
+        )}
+        {res && res.entries.length > 0 && (
+          <Table verticalSpacing={2} withRowBorders={false}>
+            <Table.Tbody>
+              {[...res.entries]
+                .sort((a, b) => Number(b.won) - Number(a.won))
+                .map((e) => (
+                  <Table.Tr key={e.raiderId}>
+                    <Table.Td fw={e.won ? 700 : 400}>{e.username}</Table.Td>
+                    <Table.Td>
+                      {e.tier && (
+                        <Group gap="xs">
+                          <TierBadge tier={e.tier} />
+                          {e.tier === 'dibs' && (
+                            <Text size="xs" c="dimmed">
+                              ilvl {e.itemLevel}
+                            </Text>
+                          )}
+                        </Group>
+                      )}
+                    </Table.Td>
+                    <Table.Td ta="right">{e.roll ?? ''}</Table.Td>
+                  </Table.Tr>
+                ))}
+            </Table.Tbody>
+          </Table>
+        )}
+      </Stack>
+    </SectionCard>
+  );
+}
