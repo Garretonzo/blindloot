@@ -244,13 +244,14 @@ export function AdminSessionPage() {
         )}
       </SectionCard>
 
+      {live?.batchResults && phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} raidId={detail.season.raid_id} />}
+
       {summary.length > 0 && <SessionSummary items={summary} raidId={detail.season.raid_id} />}
 
       {(phase === 'open' || phase === 'ready') && (
         <PrePickPreview bosses={detail.bosses} raiders={detail.raiders} plans={plans} lockedIn={live?.lockedIn ?? []} raidId={detail.season.raid_id} />
       )}
 
-      {live?.batchResults && phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} raidId={detail.season.raid_id} />}
 
       {live && (
         <RollPanel
