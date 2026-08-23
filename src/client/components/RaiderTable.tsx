@@ -71,7 +71,7 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
         <Table.Tr>
           <Table.Th>Name</Table.Th>
           <Table.Th>ilvl</Table.Th>
-          <Table.Th>Loot this session</Table.Th>
+          <Table.Th>Loot this week (this difficulty)</Table.Th>
           {lockedIn && <Table.Th>Picks</Table.Th>}
           {readyIds && <Table.Th>Ready</Table.Th>}
         </Table.Tr>

@@ -1,4 +1,4 @@
-import { RollEntry, Season, Session, SessionDetail, Tier } from '../shared/types';
+import { RollEntry, Season, Session, SessionDetail, SummaryItem, Tier } from '../shared/types';
 
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -36,7 +36,8 @@ export const api = {
     req('PUT', `/api/sessions/${id}/plans`, { raiderId: me.raiderId, token: me.token, itemId, tier }),
   roster: () => req<{ id: number; username: string }[]>('GET', '/api/raiders'),
   presence: () => req<{ online: number[] }>('GET', '/api/presence'),
-  login: (raiderId: number) => req<Identity>('POST', '/api/login', { raiderId }),
+  /** Log in as a roster raider. Passing the current token makes it an idempotent refresh of an existing login. */
+  login: (raiderId: number, token?: string) => req<Identity>('POST', '/api/login', { raiderId, token }),
   /** Is this stored login still valid on the server? */
   checkLogin: (id: Identity) => req<{ ok: boolean }>('GET', `/api/login/check?raiderId=${id.raiderId}&token=${encodeURIComponent(id.token)}`),
   logout: (id: Identity) => req('POST', '/api/logout', { raiderId: id.raiderId, token: id.token }),
@@ -64,6 +65,7 @@ export const api = {
       req('DELETE', `/api/admin/sessions/${sessionId}/items/${itemId}`),
     rolls: (sessionId: number) => req<Record<number, RollEntry[]>>('GET', `/api/admin/sessions/${sessionId}/rolls`),
     plans: (sessionId: number) => req<Record<number, PlanPreview[]>>('GET', `/api/admin/sessions/${sessionId}/plans`),
+    summary: (sessionId: number) => req<{ items: SummaryItem[] }>('GET', `/api/admin/sessions/${sessionId}/summary`),
     plansSummary: (sessionId: number) =>
       req<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number }>('GET', `/api/admin/sessions/${sessionId}/plans-summary`),
     award: (sessionId: number, itemId: number, raiderId: number | null, tier: Tier | null, force = false) =>

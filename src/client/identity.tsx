@@ -1,5 +1,6 @@
 import { Anchor, Button, Select, Stack, Text } from '@mantine/core';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import { notifications } from '@mantine/notifications';
 import { Link } from 'react-router-dom';
 import { api, Identity, loadIdentity, saveIdentity } from './api';
 import { GateCard } from './components/SectionCard';
@@ -21,14 +22,67 @@ export function IdentityProvider({ children, observe = false }: { children: Reac
     saveIdentity(id);
     set(id);
   };
+  const identityRef = useRef(identity);
+  identityRef.current = identity;
+  const healing = useRef(false);
+
+  /**
+   * Our token is no longer valid on the server (restart, reset, expiry). Quietly log in again as
+   * the same raider; only fall back to the picker if that name is genuinely taken or gone.
+   */
+  const heal = async () => {
+    const id = identityRef.current;
+    if (!id || healing.current) return;
+    // Another tab may already hold a newer login for the same raider: adopt it.
+    const stored = loadIdentity();
+    if (stored && stored.raiderId === id.raiderId && stored.token !== id.token) return set(stored);
+    healing.current = true;
+    try {
+      const fresh = await api.login(id.raiderId, id.token);
+      setIdentity(fresh);
+      if (fresh.token !== id.token) notifications.show({ color: 'teal', message: 'Reconnected.', autoClose: 3000 });
+    } catch (e) {
+      setIdentity(null);
+      loginEndedNotice(`${(e as Error).message}. Please pick your name again.`);
+    } finally {
+      healing.current = false;
+    }
+  };
+
   const online = usePresence(
     identity,
-    (reason) => {
-      setIdentity(null);
-      loginEndedNotice(reason);
+    {
+      onEnded: (reason) => {
+        setIdentity(null);
+        loginEndedNotice(reason);
+      },
+      onStale: heal,
     },
     observe,
   );
+
+  // Proactively validate the stored login once per page load, and keep tabs in sync.
+  useEffect(() => {
+    const id = identityRef.current;
+    if (id) {
+      api
+        .checkLogin(id)
+        .then((r) => {
+          if (!r.ok) void heal();
+        })
+        .catch(() => {});
+    }
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'loot_identity') return;
+      const stored = loadIdentity();
+      const cur = identityRef.current;
+      if ((stored?.token ?? null) !== (cur?.token ?? null)) set(stored);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const logout = async () => {
     if (identity) await api.logout(identity).catch(() => {});
     setIdentity(null);

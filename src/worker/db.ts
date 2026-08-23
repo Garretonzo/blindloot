@@ -84,25 +84,28 @@ export async function getItemWithBoss(db: D1Database, itemId: number) {
     .first<{ id: number; name: string; boss_name: string; session_id: number }>();
 }
 
+export type ResolveMode = 'batch' | 'live' | 'award';
+
 export interface PersistResult {
   itemId: number;
   winnerId: number | null;
   winTier: Tier | null;
-  entries: { raiderId: number; tier: Tier; roll: number | null; won: boolean }[];
+  mode: ResolveMode;
+  entries: { raiderId: number; tier: Tier; pickedTier: Tier | null; roll: number | null; won: boolean }[];
 }
 
 export async function persistResult(db: D1Database, sessionId: number, r: PersistResult) {
   const now = Date.now();
   const stmts: D1PreparedStatement[] = [
     db
-      .prepare('UPDATE items SET winner_raider_id = ?, win_tier = ?, resolved_at = ? WHERE id = ?')
-      .bind(r.winnerId, r.winTier, now, r.itemId),
+      .prepare('UPDATE items SET winner_raider_id = ?, win_tier = ?, resolved_at = ?, resolved_mode = ? WHERE id = ?')
+      .bind(r.winnerId, r.winTier, now, r.mode, r.itemId),
   ];
   for (const e of r.entries) {
     stmts.push(
       db
-        .prepare('INSERT INTO rolls (item_id, raider_id, tier, roll_value, won) VALUES (?, ?, ?, ?, ?)')
-        .bind(r.itemId, e.raiderId, e.tier, e.roll, e.won ? 1 : 0),
+        .prepare('INSERT INTO rolls (item_id, raider_id, tier, picked_tier, roll_value, won) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(r.itemId, e.raiderId, e.tier, e.pickedTier, e.roll, e.won ? 1 : 0),
     );
   }
   if (r.winnerId != null) stmts.push(...resourceStatements(db, sessionId, r.winnerId, r.winTier, true));

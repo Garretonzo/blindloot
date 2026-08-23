@@ -105,12 +105,12 @@ publicRoutes.get('/presence', async (c) => {
 });
 
 publicRoutes.post('/login', async (c) => {
-  const { raiderId } = await c.req.json<{ raiderId?: number }>();
+  const { raiderId, token } = await c.req.json<{ raiderId?: number; token?: string }>();
   const raider = await c.env.DB.prepare('SELECT id, username FROM raiders WHERE id = ?').bind(Number(raiderId)).first<{ id: number; username: string }>();
   if (!raider) return c.json({ error: 'raider not found' }, 404);
   const res = await presenceStub(c.env).fetch('https://do/login', {
     method: 'POST',
-    body: JSON.stringify({ raiderId: raider.id, username: raider.username }),
+    body: JSON.stringify({ raiderId: raider.id, username: raider.username, token: token || undefined }),
   });
   return c.json(await res.json(), res.status as 200);
 });

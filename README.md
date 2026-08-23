@@ -11,6 +11,7 @@ and countdown timers.
 ## Loot rules
 
 Tiers, lowest to highest: **Transmog** → **Off-spec** → **Equip** → **Need** → **Dibs**.
+**Pass** is an explicit "not rolling" — recorded so the officer can see it, never wins.
 
 - Transmog, Off-spec and Equip are unlimited.
 - Need: one per raider per session; consumed only when you *win* with it.
@@ -123,6 +124,10 @@ Also:
   or Dibs is demoted one tier automatically if they've already won with it.
 - Raiders see each other's item level and **who** won an item, never the tier it was won with or
   anyone else's Need / Dibs state; the admin sees everything.
+- The admin session page has a collapsed **Summary** card: every resolved item in the order it
+  was rolled, how it was resolved (batch / live / awarded), the winner, a one-line explanation
+  ("Dibs · ilvl tie (620) — rolled 87 vs Bob 43"), and every participant's pre-pick → what it
+  counted as, roll and ilvl.
 - Every participant rolls, so the admin can open **details** on a resolved item to see the top 3
   per tier, change **how** the winner got it (Transmog / Equip / Need / Dibs), **Give** the item
   to a runner-up or anyone else (choosing the tier), or remove the winner. After any such edit the

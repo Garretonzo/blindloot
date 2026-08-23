@@ -79,7 +79,7 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
               className={isReady ? undefined : 'pulse'}
               leftSection={isReady ? <IconCheck size={20} /> : undefined}
             >
-              {isReady ? 'Ready' : "Let's fucking go"}
+              {isReady ? 'Ready' : "I'm feeling lucky"}
             </Button>
           )}
           {!me && (
@@ -158,7 +158,7 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
           {header}
           {adminControls && <AdminBar live={live} controls={adminControls} />}
           {me ? (
-            <SimpleGrid cols={{ base: 2, xs: 5 }}>
+            <SimpleGrid cols={{ base: 3, xs: 6 }}>
               {TIERS.map((t) => {
                 const disabled = (t === 'need' && !me.need_available) || (t === 'dibs' && !canDibs(me));
                 const selected = mine === t;

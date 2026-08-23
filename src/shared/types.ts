@@ -1,8 +1,10 @@
-export type Tier = 'greed' | 'offspec' | 'equip' | 'need' | 'dibs';
-export const TIER_RANK: Record<Tier, number> = { greed: 0, offspec: 1, equip: 2, need: 3, dibs: 4 };
+/** Roll types. `pass` is an explicit "not rolling" — it never wins and costs nothing. */
+export type Tier = 'pass' | 'greed' | 'offspec' | 'equip' | 'need' | 'dibs';
+export const TIER_RANK: Record<Tier, number> = { pass: -1, greed: 0, offspec: 1, equip: 2, need: 3, dibs: 4 };
 /** Every tier, lowest to highest. */
-export const TIERS: Tier[] = ['greed', 'offspec', 'equip', 'need', 'dibs'];
+export const TIERS: Tier[] = ['pass', 'greed', 'offspec', 'equip', 'need', 'dibs'];
 export const TIER_LABEL: Record<Tier, string> = {
+  pass: 'Pass',
   greed: 'Transmog',
   offspec: 'Off-spec',
   equip: 'Equip',
@@ -12,6 +14,7 @@ export const TIER_LABEL: Record<Tier, string> = {
 
 /** One-line meaning of each tier, shown in tooltips and on the help page. */
 export const TIER_HINT: Record<Tier, string> = {
+  pass: "Not rolling. Don't want it.",
   greed: 'It looks cool. Unlimited rolls.',
   offspec: "You'd wear it for an off-spec. Unlimited rolls. Off-spec beats Transmog.",
   equip: "You'd actually wear it, main spec. If you lie and I catch you, you're out. Unlimited rolls. Equip beats Off-spec.",
@@ -21,6 +24,7 @@ export const TIER_HINT: Record<Tier, string> = {
 
 /** Mantine color per tier, used everywhere a tier is displayed. */
 export const TIER_COLOR: Record<Tier, string> = {
+  pass: 'red',
   greed: 'gray',
   offspec: 'cyan',
   equip: 'blue',
@@ -136,6 +140,23 @@ export interface RollEntry {
   effectiveTier?: Tier;
   /** Admin rolls view: true when effectiveTier is lower than the rolled tier. */
   ineligible?: boolean;
+  /** Summary: the raider's pre-pick at resolution time (null = none / rolled live). */
+  pickedTier?: Tier | null;
+}
+
+/** One resolved item in the admin summary, in resolution order. */
+export interface SummaryItem {
+  itemId: number;
+  name: string;
+  icon: string | null;
+  bossName: string;
+  bossIcon: string | null;
+  order: number;
+  mode: 'batch' | 'live' | 'award' | null;
+  winnerId: number | null;
+  winnerName: string | null;
+  winTier: Tier | null;
+  entries: RollEntry[];
 }
 
 export interface ItemResult {

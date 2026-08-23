@@ -39,9 +39,13 @@ export class PresenceDO extends DurableObject<Env> {
 
     switch (url.pathname) {
       case '/login': {
-        const { raiderId: id, username } = (await request.json()) as { raiderId: number; username: string };
+        const { raiderId: id, username, token: presented } = (await request.json()) as { raiderId: number; username: string; token?: string };
         const existing = this.logins[id];
-        if (existing && this.isActive(existing)) return Response.json({ error: `${existing.username} is already logged in` }, { status: 409 });
+        if (existing && this.isActive(existing)) {
+          // Same browser re-checking its own login: hand the existing one back (idempotent).
+          if (presented && presented === existing.token) return Response.json({ raiderId: id, username, token: existing.token });
+          return Response.json({ error: `${existing.username} is already logged in` }, { status: 409 });
+        }
         const login: Login = { token: crypto.randomUUID(), username, since: Date.now(), graceUntil: Date.now() + GRACE_MS };
         this.logins[id] = login;
         await this.persist();

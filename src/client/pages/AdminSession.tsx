@@ -1,12 +1,13 @@
-import { Anchor, Badge, Button, Checkbox, Group, NumberInput, Select, Stack, Text, Title } from '@mantine/core';
-import { SectionCard, SubHeader } from '../components/SectionCard';
+import { Anchor, Badge, Button, Checkbox, Divider, Group, NumberInput, Select, Stack, Text, Title } from '@mantine/core';
+import { SectionCard } from '../components/SectionCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, PlanPreview, RosterRaider } from '../api';
 import { PrePickPreview } from '../components/PrePickPreview';
-import { RollEntry, SessionDetail, TIER_LABEL } from '../../shared/types';
+import { RollEntry, SessionDetail, SummaryItem, TIER_LABEL } from '../../shared/types';
+import { SessionSummary } from '../components/SessionSummary';
 import { useSessionSocket } from '../useSessionSocket';
 import { useRequireAdmin } from './Admin';
 import { ItemList } from '../components/ItemList';
@@ -72,6 +73,7 @@ export function AdminSessionPage() {
   const [rolls, setRolls] = useState<Record<number, RollEntry[]>>({});
   const [picks, setPicks] = useState<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number } | null>(null);
   const [plans, setPlans] = useState<Record<number, PlanPreview[]>>({});
+  const [summary, setSummary] = useState<SummaryItem[]>([]);
   const { state: live, connected, send } = useSessionSocket(sessionId, null);
 
   const refresh = useCallback(() => {
@@ -79,6 +81,7 @@ export function AdminSessionPage() {
     api.admin.rolls(sessionId).then(setRolls).catch(() => {});
     api.admin.plansSummary(sessionId).then(setPicks).catch(() => {});
     api.admin.plans(sessionId).then(setPlans).catch(() => {});
+    api.admin.summary(sessionId).then((s) => setSummary(s.items)).catch(() => {});
   }, [sessionId]);
   useEffect(() => {
     if (ok) refresh();
@@ -241,6 +244,8 @@ export function AdminSessionPage() {
         )}
       </SectionCard>
 
+      {summary.length > 0 && <SessionSummary items={summary} raidId={detail.season.raid_id} />}
+
       {(phase === 'open' || phase === 'ready') && (
         <PrePickPreview bosses={detail.bosses} raiders={detail.raiders} plans={plans} lockedIn={live?.lockedIn ?? []} raidId={detail.season.raid_id} />
       )}
@@ -265,7 +270,7 @@ export function AdminSessionPage() {
         />
       )}
 
-      <SectionCard title="Loot">
+      <SectionCard title="Loot" collapsible defaultOpen right={<Text size="xs" c="dimmed">{pendingCount} unrolled</Text>}>
         <ItemList
           bosses={detail.bosses}
           raiders={detail.raiders}
@@ -286,13 +291,16 @@ export function AdminSessionPage() {
         />
         {editable && (
           <>
-            <SubHeader>Add boss</SubHeader>
+            <Divider mt="xl" mb="sm" />
+            <Title order={5} c="teal.2" mb="xs">
+              Add boss
+            </Title>
             <BossForm raidId={detail.season.raid_id} onSubmit={(name, icon, items) => run(api.admin.addBoss(sessionId, name, icon, items)) as Promise<void>} />
           </>
         )}
       </SectionCard>
 
-      <SectionCard title="Raiders" right={<Text size="xs" c="dimmed">{detail.raiders.length} joined</Text>}>
+      <SectionCard title="Raiders" collapsible defaultOpen right={<Text size="xs" c="dimmed">{detail.raiders.length} joined</Text>}>
         <RaiderTable
           raiders={detail.raiders}
           editable={phase !== 'closed'}

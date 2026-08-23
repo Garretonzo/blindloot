@@ -49,6 +49,8 @@ export function PrePickPreview({ bosses, raiders, plans, lockedIn, raidId }: Pro
   return (
     <SectionCard
       title="Pre-picks (only you see this)"
+      collapsible
+      defaultOpen={false}
       right={
         <Group gap="sm">
           <Text size="xs" c="dimmed">

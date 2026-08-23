@@ -1,16 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
-import { api, Identity, loadIdentity, LOGIN_LOST_EVENT } from './api';
+import { api, Identity, LOGIN_LOST_EVENT } from './api';
+
+export interface PresenceHandlers {
+  /** Hard end: admin kicked us or we logged out. */
+  onEnded: (reason: string) => void;
+  /** Our stored token is no longer valid server-side (restart, reset, expiry) — try to repair it. */
+  onStale: () => void;
+}
 
 /**
  * Keeps a socket open to the presence service while logged in (that's what "logged in" means
  * server-side) and reports who else is online. Admin pages pass `observe` to watch without
- * a raider identity. When the server ends the login the callback fires.
+ * a raider identity.
  */
-export function usePresence(identity: Identity | null, onEnded: (reason: string) => void, observe = false) {
+export function usePresence(identity: Identity | null, handlers: PresenceHandlers, observe = false) {
   const [online, setOnline] = useState<Set<number>>(new Set());
-  const onEndedRef = useRef(onEnded);
-  onEndedRef.current = onEnded;
+  const ref = useRef(handlers);
+  ref.current = handlers;
 
   useEffect(() => {
     if (!identity && !observe) return;
@@ -38,18 +45,13 @@ export function usePresence(identity: Identity | null, onEnded: (reason: string)
       };
       ws.onclose = async (ev) => {
         if (closed) return;
-        if (ev.code === 4001) return onEndedRef.current('An admin ended your login.');
-        if (ev.code === 4000) return onEndedRef.current('Logged out.');
+        if (ev.code === 4001) return ref.current.onEnded('An admin ended your login.');
+        if (ev.code === 4000) return ref.current.onEnded('Logged out.');
         // Handshake refused (never opened): the server may no longer know this login.
         if (!opened && identity) {
           const { ok } = await api.checkLogin(identity).catch(() => ({ ok: true })); // network issue → keep trying
           if (closed) return;
-          if (!ok) {
-            // Another tab may have logged in again with a fresh token; don't wipe that.
-            const stored = loadIdentity();
-            if (stored && stored.raiderId === identity.raiderId && stored.token !== identity.token) return onEndedRef.current('Reconnected as the newer login in your other tab.');
-            return onEndedRef.current('Your login expired. Please pick your name again.');
-          }
+          if (!ok) return ref.current.onStale();
         }
         attempt += 1;
         timer = window.setTimeout(connect, Math.min(10_000, 500 * 2 ** attempt));
@@ -57,8 +59,8 @@ export function usePresence(identity: Identity | null, onEnded: (reason: string)
       ws.onerror = () => ws?.close();
     };
 
-    // Any raider API call answered "not logged in" also ends the login.
-    const onLost = () => onEndedRef.current('Your login expired. Please pick your name again.');
+    // Any raider API call answered "not logged in" also means the token is stale.
+    const onLost = () => ref.current.onStale();
     window.addEventListener(LOGIN_LOST_EVENT, onLost);
 
     connect();

@@ -1,37 +1,56 @@
 import { Anchor, Avatar, Card, Divider, Group, Text, Title } from '@mantine/core';
-import { ReactNode } from 'react';
+import { IconChevronDown, IconChevronRight } from '@tabler/icons-react';
+import { ReactNode, useState } from 'react';
 
-/** Card with a teal-tinted header strip and a left accent bar. All page cards use this. */
+/**
+ * Card with a teal-tinted header strip and a left accent bar. All page cards use this.
+ * With `collapsible`, clicking the title toggles the body (starts at `defaultOpen`).
+ */
 export function SectionCard({
   title,
   right,
   children,
+  collapsible = false,
+  defaultOpen = true,
 }: {
   title: ReactNode;
   right?: ReactNode;
   children: ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const shown = !collapsible || open;
   return (
     <Card padding="md">
       <Card.Section
-        withBorder
+        withBorder={shown}
         inheritPadding
         py="xs"
         style={{
           background: 'linear-gradient(90deg, rgba(18,184,134,0.16), rgba(18,184,134,0.04) 60%, transparent)',
           borderLeft: '3px solid var(--mantine-color-teal-5)',
+          cursor: collapsible ? 'pointer' : undefined,
+          userSelect: collapsible ? 'none' : undefined,
         }}
+        onClick={collapsible ? () => setOpen((o) => !o) : undefined}
       >
         <Group justify="space-between">
-          <Title order={5} c="teal.2">
-            {title}
-          </Title>
-          {right}
+          <Group gap={6}>
+            {collapsible && (open ? <IconChevronDown size={16} color="var(--mantine-color-teal-3)" /> : <IconChevronRight size={16} color="var(--mantine-color-teal-3)" />)}
+            <Title order={5} c="teal.2">
+              {title}
+            </Title>
+          </Group>
+          {/* Stop clicks on header controls from toggling the card. */}
+          <div onClick={(e) => e.stopPropagation()}>{right}</div>
         </Group>
       </Card.Section>
-      <Card.Section inheritPadding pt="md" pb="md">
-        {children}
-      </Card.Section>
+      {shown && (
+        <Card.Section inheritPadding pt="md" pb="md">
+          {children}
+        </Card.Section>
+      )}
     </Card>
   );
 }

@@ -3,7 +3,7 @@ import { Env } from '../env';
 import { clearAdminCookie, getRole, requireAdmin, requireSuper, roleForPassword, setAdminCookie } from '../auth';
 import { clearSession, notifySession, presenceStub, sessionStub } from '../session';
 import { getSessionRolls, joinSession, LAST_ILVL_SQL, raiderEligibility, recomputeRaiderResources, setItemLevelStatements, upsertRaider } from '../db';
-import { demoteTier, Tier } from '../../shared/types';
+import { demoteTier, SummaryItem, Tier } from '../../shared/types';
 import { raidById } from '../../shared/raids';
 
 export const adminRoutes = new Hono<{ Bindings: Env }>();
@@ -186,6 +186,42 @@ adminRoutes.delete('/sessions/:id/items/:itemId', async (c) => {
   return c.json({ ok: true });
 });
 
+/** The session's full loot story: every resolved item in order with everyone's pick, roll and outcome. */
+adminRoutes.get('/sessions/:id/summary', async (c) => {
+  const sessionId = Number(c.req.param('id'));
+  const db = c.env.DB;
+  const items = await db
+    .prepare(
+      `SELECT i.id, i.name, i.icon, b.name AS boss_name, b.icon AS boss_icon, i.resolved_mode, i.winner_raider_id, i.win_tier, w.username AS winner_name
+       FROM items i JOIN bosses b ON b.id = i.boss_id LEFT JOIN raiders w ON w.id = i.winner_raider_id
+       WHERE b.session_id = ? AND i.resolved_at IS NOT NULL ORDER BY i.resolved_at, i.id`,
+    )
+    .bind(sessionId)
+    .all<{ id: number; name: string; icon: string | null; boss_name: string; boss_icon: string | null; resolved_mode: SummaryItem['mode']; winner_raider_id: number | null; win_tier: Tier | null; winner_name: string | null }>();
+  const rolls = await getSessionRolls(db, sessionId);
+  const picked = await db
+    .prepare(
+      `SELECT ro.item_id, ro.raider_id, ro.picked_tier FROM rolls ro JOIN items i ON i.id = ro.item_id JOIN bosses b ON b.id = i.boss_id WHERE b.session_id = ?`,
+    )
+    .bind(sessionId)
+    .all<{ item_id: number; raider_id: number; picked_tier: Tier | null }>();
+  const pickedBy = new Map(picked.results.map((r) => [`${r.item_id}:${r.raider_id}`, r.picked_tier]));
+  const out: SummaryItem[] = items.results.map((i, idx) => ({
+    itemId: i.id,
+    name: i.name,
+    icon: i.icon,
+    bossName: i.boss_name,
+    bossIcon: i.boss_icon,
+    order: idx + 1,
+    mode: i.resolved_mode,
+    winnerId: i.winner_raider_id,
+    winnerName: i.winner_name,
+    winTier: i.win_tier,
+    entries: (rolls[i.id] ?? []).map((e) => ({ ...e, pickedTier: pickedBy.get(`${i.id}:${e.raiderId}`) ?? null })),
+  }));
+  return c.json({ items: out });
+});
+
 /** Every raider's pre-pick on every unresolved item, with what it will actually count as. Admin only. */
 adminRoutes.get('/sessions/:id/plans', async (c) => {
   const sessionId = Number(c.req.param('id'));
@@ -237,7 +273,7 @@ adminRoutes.get('/sessions/:id/rolls', async (c) => {
   for (const [itemIdStr, entries] of Object.entries(rolls)) {
     const itemId = Number(itemIdStr);
     for (const e of entries) {
-      if (!e.tier || e.tier === 'greed' || e.tier === 'equip') {
+      if (!e.tier || (e.tier !== 'need' && e.tier !== 'dibs')) {
         e.effectiveTier = e.tier;
         e.ineligible = false;
         continue;
@@ -278,7 +314,9 @@ adminRoutes.post('/sessions/:id/items/:itemId/award', async (c) => {
   if (live.itemId === itemId) return c.json({ error: 'item is being rolled right now' }, 409);
 
   const stmts: D1PreparedStatement[] = [
-    db.prepare('UPDATE items SET winner_raider_id = ?, win_tier = ?, resolved_at = COALESCE(resolved_at, ?) WHERE id = ?').bind(raiderId, tier, Date.now(), itemId),
+    db
+      .prepare("UPDATE items SET winner_raider_id = ?, win_tier = ?, resolved_at = COALESCE(resolved_at, ?), resolved_mode = COALESCE(resolved_mode, 'award') WHERE id = ?")
+      .bind(raiderId, tier, Date.now(), itemId),
     db.prepare('UPDATE rolls SET won = CASE WHEN raider_id = ? THEN 1 ELSE 0 END WHERE item_id = ?').bind(raiderId ?? -1, itemId),
     db.prepare('DELETE FROM plans WHERE item_id = ?').bind(itemId),
   ];

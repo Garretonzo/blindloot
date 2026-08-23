@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { Env } from './env';
 import { canDibs, ClientMessage, ItemResult, LiveState, ServerMessage, Tier } from '../shared/types';
 import { resolveItem, Participant } from '../shared/resolve';
-import { getItemWithBoss, getPendingItemIds, getPlansForItem, getSessionRaiders, persistResult, setSessionStatus } from './db';
+import { getItemWithBoss, getPendingItemIds, getPlansForItem, getSessionRaiders, persistResult, ResolveMode, setSessionStatus } from './db';
 
 const DEFAULT_ITEM_SECONDS = 10;
 const DEFAULT_RESULT_SECONDS = 3;
@@ -270,7 +270,7 @@ export class SessionDO extends DurableObject<Env> {
     const results: ItemResult[] = [];
     for (const itemId of itemIds) {
       const choices = await this.prefilledChoices(itemId); // re-read each time: earlier wins change eligibility
-      results.push(await this.resolveOne(itemId, choices));
+      results.push(await this.resolveOne(itemId, choices, 'batch'));
     }
     await this.save({ batchResults: results, lastResult: null, lockedIn: [], revision: this.state.revision + 1 });
   }
@@ -315,7 +315,7 @@ export class SessionDO extends DurableObject<Env> {
   }
 
   private async resolveCurrent() {
-    const lastResult = await this.resolveOne(this.state.itemIds[this.state.currentIndex], this.state.choices);
+    const lastResult = await this.resolveOne(this.state.itemIds[this.state.currentIndex], this.state.choices, 'live');
     await this.save({
       phase: 'results',
       lastResult,
@@ -327,9 +327,11 @@ export class SessionDO extends DurableObject<Env> {
   }
 
   /** Roll one item for the given choices, persist the outcome, and describe it. */
-  private async resolveOne(itemId: number, choices: Record<number, Tier>): Promise<ItemResult> {
+  private async resolveOne(itemId: number, choices: Record<number, Tier>, mode: ResolveMode): Promise<ItemResult> {
     const item = await getItemWithBoss(this.env.DB, itemId);
     const raiders = await getSessionRaiders(this.env.DB, this.sessionId);
+    // Original pre-picks, kept in the record so the summary can show pick → counted-as.
+    const picked = await getPlansForItem(this.env.DB, itemId);
 
     const participants: Participant[] = [];
     for (const [idStr, tier] of Object.entries(choices)) {
@@ -347,7 +349,8 @@ export class SessionDO extends DurableObject<Env> {
       itemId,
       winnerId: res.winnerId,
       winTier: res.winTier,
-      entries: res.entries.map((e) => ({ raiderId: e.raiderId, tier: e.tier!, roll: e.roll, won: e.won })),
+      mode,
+      entries: res.entries.map((e) => ({ raiderId: e.raiderId, tier: e.tier!, pickedTier: picked[e.raiderId] ?? null, roll: e.roll, won: e.won })),
     });
 
     return {

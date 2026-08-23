@@ -191,7 +191,7 @@ function AwardDetails({
   const [open, setOpen] = useState(false);
   const [giveTo, setGiveTo] = useState<number | null>(null);
   const ranked = rankByTier(entries);
-  const order: Tier[] = ['dibs', 'need', 'equip', 'offspec', 'greed'];
+  const order: Tier[] = ['dibs', 'need', 'equip', 'offspec', 'greed', 'pass'];
   const others = raiders.filter((r) => !entries.some((e) => e.raiderId === r.id));
   const winner = raiders.find((r) => r.id === item.winner_raider_id) ?? null;
 
@@ -212,7 +212,7 @@ function AwardDetails({
 
   const tierRow = (current: Tier | null, onPick: (t: Tier) => void) => (
     <Button.Group>
-      {TIERS.map((t) => (
+      {TIERS.filter((t) => t !== 'pass').map((t) => (
         <Button
           key={t}
           size="compact-xs"

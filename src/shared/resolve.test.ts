@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveItem, rankByTier, Participant } from './resolve';
+import { resolveItem, rankByTier, explainResult, Participant } from './resolve';
 
 const p = (id: number, tier: Participant['tier'], itemLevel = 600): Participant => ({
   id,
@@ -35,6 +35,15 @@ describe('resolveItem', () => {
     expect(r.entries.map((e) => e.roll)).toEqual([42, 7]);
   });
 
+  it('pass never wins, even alone, but is recorded', () => {
+    const alone = resolveItem([p(1, 'pass')]);
+    expect(alone.winnerId).toBeNull();
+    expect(alone.entries).toHaveLength(1);
+    const r = resolveItem([p(1, 'pass'), p(2, 'greed')], seq(1, 1));
+    expect(r.winnerId).toBe(2);
+    expect(r.entries.find((e) => e.raiderId === 1)!.roll).toBeNull();
+  });
+
   it('off-spec beats transmog and loses to equip', () => {
     expect(resolveItem([p(1, 'greed'), p(2, 'offspec')], seq(100, 1)).winnerId).toBe(2);
     expect(resolveItem([p(1, 'offspec'), p(2, 'equip')], seq(100, 1)).winnerId).toBe(2);
@@ -59,6 +68,19 @@ describe('resolveItem', () => {
   it('same tier: highest roll wins', () => {
     const r = resolveItem([p(1, 'equip'), p(2, 'equip'), p(3, 'equip')], seq(50, 99, 1));
     expect(r.winnerId).toBe(2);
+  });
+});
+
+describe('explainResult', () => {
+  const ex = (ps: Participant[], ...rolls: number[]) => explainResult(resolveItem(ps, seq(...(rolls.length ? rolls : [1]))).entries);
+  it('covers every branch', () => {
+    expect(ex([])).toBe('Nobody rolled.');
+    expect(ex([p(1, 'pass')])).toBe('Nobody rolled.');
+    expect(ex([p(1, 'equip')])).toBe('Uncontested Equip.');
+    expect(ex([p(1, 'need'), p(2, 'greed')], 50, 60)).toBe('Uncontested Need. Outranked 1 lower pick.');
+    expect(ex([p(1, 'need'), p(2, 'need')], 91, 77)).toBe('Need · rolled 91 vs r2 77.');
+    expect(ex([p(1, 'dibs', 625), p(2, 'dibs', 618)], 1, 99)).toBe("Dibs · ilvl 625 beat r2's 618.");
+    expect(ex([p(1, 'dibs', 620), p(2, 'dibs', 620), p(3, 'equip')], 87, 43, 99)).toBe('Dibs · ilvl tie (620) — rolled 87 vs r2 43. Outranked 1 lower pick.');
   });
 });
 

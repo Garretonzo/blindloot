@@ -15,7 +15,7 @@ export function BatchResults({ results, bosses, raidId }: { results: ItemResult[
   const won = results.filter((r) => r.winnerId != null).length;
   return (
     <SectionCard
-      title="Instant batch results"
+      title="Loot Winners"
       right={
         <Text size="xs" c="dimmed">
           {won} of {results.length} items awarded
