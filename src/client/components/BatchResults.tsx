@@ -4,9 +4,10 @@ import { Boss, ItemResult } from '../../shared/types';
 import { SectionCard } from './SectionCard';
 import { TierBadge } from './TierBadge';
 import { Icon } from './Icon';
+import { ItemTooltip } from './ItemTooltip';
 
 /** Results of an instant batch, in the order the items were rolled. Tiers/rolls are only present for admins. */
-export function BatchResults({ results, bosses }: { results: ItemResult[]; bosses: Boss[] }) {
+export function BatchResults({ results, bosses, raidId }: { results: ItemResult[]; bosses: Boss[]; raidId?: string }) {
   const find = (itemId: number) => {
     const boss = bosses.find((b) => b.items.some((i) => i.id === itemId));
     return { boss, item: boss?.items.find((i) => i.id === itemId) };
@@ -32,11 +33,15 @@ export function BatchResults({ results, bosses }: { results: ItemResult[]; bosse
                   <Text size="xs" c="dimmed" w={24} ta="right">
                     {idx + 1}.
                   </Text>
-                  <Icon src={item?.icon} size="sm" />
+                  <ItemTooltip raidId={raidId} name={r.itemName}>
+                    <Icon src={item?.icon} size="sm" />
+                  </ItemTooltip>
                   <div>
-                    <Text size="sm" fw={600}>
-                      {r.itemName}
-                    </Text>
+                    <ItemTooltip raidId={raidId} name={r.itemName}>
+                      <Text size="sm" fw={600}>
+                        {r.itemName}
+                      </Text>
+                    </ItemTooltip>
                     <Group gap={4}>
                       <Icon src={boss?.icon} size={14} />
                       <Text size="xs" c="dimmed">

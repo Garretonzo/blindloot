@@ -7,97 +7,286 @@
       "slug": "nekzali",
       "name": "Nek'zali the Soulcoiler",
       "icon": "/icons/bosses/nekzali.gif",
+      "url": "https://www.wowhead.com/search?q=Nek'zali%20the%20Soulcoiler#npcs",
       "items": [
         {
           "id": 268236,
           "name": "Initiate's Sacrificial Tights",
           "icon": "/icons/items/inv_pant_cloth_raidpriestulatek_d_01.jpg",
           "slot": "Legs",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Legs",
+            "Cloth",
+            "48 Armor",
+            "+65 Intellect",
+            "+1,005 Stamina",
+            "+34 Versatility",
+            "+73 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268236"
         },
         {
           "id": 268218,
           "name": "Nek'zali's Spiritwalkers",
           "icon": "/icons/items/inv_boot_cloth_raidpriestulatek_d_01.jpg",
           "slot": "Feet",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Feet",
+            "Cloth",
+            "35 Armor",
+            "+48 Intellect",
+            "+754 Stamina",
+            "+56 Critical Strike",
+            "+25 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268218"
         },
         {
           "id": 268235,
           "name": "Vestment of the Awakening",
           "icon": "/icons/items/inv_robe_leather_raiddruidulatek_d_01.jpg",
           "slot": "Chest",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Chest",
+            "Leather",
+            "95 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+74 Haste",
+            "+33 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268235"
         },
         {
           "id": 268240,
           "name": "Restless Spirit Shackles",
           "icon": "/icons/items/8095063.jpg",
           "slot": "Wrist",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Wrist",
+            "Leather",
+            "48 Armor",
+            "+36 [Agility or Intellect]",
+            "+565 Stamina",
+            "+40 Critical Strike",
+            "+21 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268240"
         },
         {
           "id": 268231,
           "name": "Soulslither Spaulders",
           "icon": "/icons/items/inv_shoulder_mail_raidshamanulatek_d_01.jpg",
           "slot": "Shoulder",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Shoulder",
+            "Mail",
+            "96 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+25 Critical Strike",
+            "+56 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268231"
         },
         {
           "id": 268216,
           "name": "Cursed Reliquary Cincture",
           "icon": "/icons/items/inv_belt_mail_raidevokerulatek_d_01.jpg",
           "slot": "Waist",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Waist",
+            "Mail",
+            "79 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+56 Critical Strike",
+            "+25 Versatility",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268216"
         },
         {
           "id": 268229,
           "name": "Skullguard of the Risen Sacrifice",
           "icon": "/icons/items/inv_helm_plate_raiddeathknightulatek_d_01.jpg",
           "slot": "Head",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Head",
+            "Plate",
+            "158 Armor",
+            "+65 [Strength or Intellect]",
+            "+1,005 Stamina",
+            "+32 Critical Strike",
+            "+75 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268229"
         },
         {
           "id": 268245,
           "name": "Entombed Cultist's Sabatons",
           "icon": "/icons/items/inv_boot_plate_raidwarriorulatek_d_01.jpg",
           "slot": "Feet",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Feet",
+            "Plate",
+            "132 Armor",
+            "+48 [Strength or Intellect]",
+            "+754 Stamina",
+            "+56 Critical Strike",
+            "+24 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268245"
         },
         {
           "id": 268248,
           "name": "Amani Summoning Shawl",
           "icon": "/icons/items/inv_cape_leather_raidmonkulatek_d_01.jpg",
           "slot": "Back",
-          "type": "Cloaks"
+          "type": "Cloaks",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Back",
+            "38 Armor",
+            "+36 [Agility or Strength or Intellect]",
+            "+565 Stamina",
+            "+42 Critical Strike",
+            "+18 Versatility",
+            "Requires Level 90",
+            "\"Kale, Ula'tek! Ula'tek ban kale!\""
+          ],
+          "url": "https://www.wowhead.com/item=268248"
         },
         {
           "id": 268208,
           "name": "Strongblood's Ceremonial Cleaver",
           "icon": "/icons/items/inv_axe_1h_ulatek_d_01.jpg",
           "slot": "One-Hand",
-          "type": "One-Handed Axes"
+          "type": "One-Handed Axes",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Axe",
+            "62 - 129 Damage",
+            "Speed 2.60",
+            "(36.7 damage per second)",
+            "+32 Strength",
+            "+502 Stamina",
+            "+18 Critical Strike",
+            "+35 Mastery",
+            "Requires Level 90",
+            "\"Others had noticed her obsession. Did he ignore it? Or could he not see his sister for what she had become?\""
+          ],
+          "url": "https://www.wowhead.com/item=268208"
         },
         {
           "id": 268203,
           "name": "Hexing Spiritrender",
           "icon": "/icons/items/inv_knife_1h_ulatek_d_02.jpg",
           "slot": "One-Hand",
-          "type": "Daggers"
+          "type": "Daggers",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Dagger",
+            "24 - 41 Damage",
+            "Speed 1.80",
+            "(18.1 damage per second)",
+            "+188 Intellect",
+            "+502 Stamina",
+            "+16 Critical Strike",
+            "+38 Mastery",
+            "Requires Level 90",
+            "\"\"Dis be de only way.\" - Nek'zali\""
+          ],
+          "url": "https://www.wowhead.com/item=268203"
         },
         {
           "id": 270930,
           "name": "Tomb-Creeper's Claw",
           "icon": "/icons/items/inv_hand_1h_ulatek_d_01.jpg",
           "slot": "One-Hand",
-          "type": "Fist Weapons"
+          "type": "Fist Weapons",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Fist Weapon",
+            "78 - 112 Damage",
+            "Speed 2.60",
+            "(36.5 damage per second)",
+            "+32 Agility",
+            "+502 Stamina",
+            "+16 Critical Strike",
+            "+37 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270930"
         },
         {
           "id": 270162,
           "name": "Soulcoiler Ritual Vessel",
           "icon": "/icons/items/inv_121_trinket_raid_ulatek_ritualvessel.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 Intellect",
+            "Use: Call forth 5 Soulcoiler Cultist spirits over 2 sec and sacrifice their essence, each granting an ally a barrier reducing damage taken by 50% for 20 sec or until (76084 * 1) damage has been prevented.",
+            "Allied deaths reduce this cooldown by 30 sec and immediately summon a Soulcoil Cultist spirit for sacrifice. (2 Min Cooldown)",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270162"
         }
       ]
     },
@@ -105,97 +294,260 @@
       "slug": "entombed-sentinels",
       "name": "Entombed Sentinels",
       "icon": "/icons/bosses/entombed-sentinels.gif",
+      "url": "https://www.wowhead.com/search?q=Entombed%20Sentinels#npcs",
       "items": [
         {
           "id": 268228,
           "name": "Venom-Singed Cuffs",
           "icon": "/icons/items/inv_bracer_cloth_raidmageulatek_d_01.jpg",
           "slot": "Wrist",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Wrist",
+            "Cloth",
+            "28 Armor",
+            "+36 Intellect",
+            "+565 Stamina",
+            "+21 Critical Strike",
+            "+39 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268228"
         },
         {
           "id": 268219,
           "name": "Shadow Hunter's Warmask",
           "icon": "/icons/items/inv_helm_leather_raidrogueulatek_d_01.jpg",
           "slot": "Head",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Head",
+            "Leather",
+            "71 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+36 Versatility",
+            "+71 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268219"
         },
         {
           "id": 268224,
           "name": "Venom Warden's Greaves",
           "icon": "/icons/items/inv_pant_plate_raidwarriorulatek_d_01.jpg",
           "slot": "Legs",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Legs",
+            "Plate",
+            "184 Armor",
+            "+65 [Strength or Intellect]",
+            "+1,005 Stamina",
+            "+72 Haste",
+            "+35 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268224"
         },
         {
           "id": 268230,
           "name": "Crown of the Eternal Fang",
           "icon": "/icons/items/inv_helm_mail_raidshamanulatek_d_01.jpg",
           "slot": "Head",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Head",
+            "Mail",
+            "105 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+73 Critical Strike",
+            "+34 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268230"
         },
         {
           "id": 268204,
           "name": "Ancient Construct's Venomshiv",
           "icon": "/icons/items/inv_knife_1h_ulatek_d_01.jpg",
           "slot": "One-Hand",
-          "type": "Daggers"
+          "type": "Daggers",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Dagger",
+            "49 - 83 Damage",
+            "Speed 1.80",
+            "(36.7 damage per second)",
+            "+32 Agility",
+            "+502 Stamina",
+            "+38 Haste",
+            "+16 Versatility",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268204"
         },
         {
           "id": 268198,
           "name": "Caustic Keeper-Crusher",
           "icon": "/icons/items/inv_mace_2h_ulatek_d_01.jpg",
           "slot": "Two-Hand",
-          "type": "Two-Handed Maces"
+          "type": "Two-Handed Maces",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Two-Hand",
+            "Mace",
+            "153 - 197 Damage",
+            "Speed 3.60",
+            "(48.6 damage per second)",
+            "+65 Strength",
+            "+1,005 Stamina",
+            "+73 Critical Strike",
+            "+34 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268198"
         },
         {
           "id": 268197,
           "name": "Spine of the Hissing Abyss",
           "icon": "/icons/items/inv_offhand_1h_ulatek_d_01.jpg",
           "slot": "Held In Off-hand",
-          "type": "Off-hand Frills"
+          "type": "Off-hand Frills",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Held In Off-hand",
+            "+99 Intellect",
+            "+502 Stamina",
+            "+17 Haste",
+            "+36 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268197"
         },
         {
           "id": 268250,
           "name": "Sentinel's Vitriolic Chain",
           "icon": "/icons/items/inv_121_jewelry_neck02_green.jpg",
           "slot": "Neck",
-          "type": "Amulets"
+          "type": "Amulets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Neck",
+            "+565 Stamina",
+            "+37 Critical Strike",
+            "+121 Haste",
+            "Equip: Damage taken from Deadly Venom on the Coiled Isle and within the Venomous Abyss reduced by 7%.",
+            "Requires Level 90",
+            "\"Curse of her blood purge you.\""
+          ],
+          "url": "https://www.wowhead.com/item=268250"
         },
         {
           "id": 270165,
           "name": "Keeper's Seething Core",
           "icon": "/icons/items/inv_121_trinket_raid_ulatek_golemhearts_green.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 [Agility or Strength]",
+            "Equip: Your attacks have a high chance to grant you Focus of Ula'tek, increasing your Haste by 68 for 12 sec. Multiple applications may overlap.",
+            "When two or more applications are active, your focus sharpens further to increase the effect by 20%.",
+            "Requires Level 90",
+            "\"Curse of her venom find you.\""
+          ],
+          "url": "https://www.wowhead.com/item=270165"
         },
         {
           "id": 270910,
           "name": "Venomwoven Idol",
           "icon": "/icons/items/inv_jewelcrafting_azureserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Priest, Mage, Warlock",
+            "Use: Create a soulbound set hand item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270910"
         },
         {
           "id": 270911,
           "name": "Venomcured Idol",
           "icon": "/icons/items/inv_jewelcrafting_purpleserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Rogue, Monk, Druid, Demon Hunter",
+            "Use: Create a soulbound set hand item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270911"
         },
         {
           "id": 270912,
           "name": "Venomcast Idol",
           "icon": "/icons/items/inv_jewelcrafting_goldenserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Hunter, Shaman, Evoker",
+            "Use: Create a soulbound set hand item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270912"
         },
         {
           "id": 270913,
           "name": "Venomforged Idol",
           "icon": "/icons/items/inv_jewelcrafting_rubyserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Warrior, Paladin, Death Knight",
+            "Use: Create a soulbound set hand item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270913"
         }
       ]
     },
@@ -203,90 +555,241 @@
       "slug": "vashnik",
       "name": "Vashnik the Malignant",
       "icon": "/icons/bosses/vashnik.gif",
+      "url": "https://www.wowhead.com/search?q=Vashnik%20the%20Malignant#npcs",
       "items": [
         {
           "id": 268246,
           "name": "Frothing Venom Spaulders",
           "icon": "/icons/items/inv_shoulder_leather_raiddemonhunterulatek_d_01.jpg",
           "slot": "Shoulder",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Shoulder",
+            "Leather",
+            "65 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+53 Critical Strike",
+            "+27 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268246"
         },
         {
           "id": 268254,
           "name": "Serpentine Mixing Belt",
           "icon": "/icons/items/inv_belt_mail_raidshamanulatek_d_01.jpg",
           "slot": "Waist",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Waist",
+            "Mail",
+            "79 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+25 Haste",
+            "+55 Mastery",
+            "Requires Level 90",
+            "\"Little bit of this, little bit of that.\""
+          ],
+          "url": "https://www.wowhead.com/item=268254"
         },
         {
           "id": 268260,
           "name": "Scaled Fiend's Warboots",
           "icon": "/icons/items/inv_boot_plate_raidpaladinulatek_d_01.jpg",
           "slot": "Feet",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Feet",
+            "Plate",
+            "132 Armor",
+            "+48 [Strength or Intellect]",
+            "+754 Stamina",
+            "+25 Haste",
+            "+55 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268260"
         },
         {
           "id": 268205,
           "name": "Venomancer's Winged Channeler",
           "icon": "/icons/items/inv_staff_2h_ulatek_d_02.jpg",
           "slot": "Two-Hand",
-          "type": "Staves"
+          "type": "Staves",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Two-Hand",
+            "Staff",
+            "74 - 101 Damage",
+            "Speed 3.60",
+            "(24.3 damage per second)",
+            "+287 Intellect",
+            "+1,005 Stamina",
+            "+34 Haste",
+            "+73 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268205"
         },
         {
           "id": 268214,
           "name": "Malignant Toothed Edge",
           "icon": "/icons/items/inv_sword_2h_ulatek_d_01.jpg",
           "slot": "Two-Hand",
-          "type": "Two-Handed Swords"
+          "type": "Two-Handed Swords",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Two-Hand",
+            "Sword",
+            "131 - 219 Damage",
+            "Speed 3.60",
+            "(48.6 damage per second)",
+            "+65 Strength",
+            "+1,005 Stamina",
+            "+71 Haste",
+            "+36 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268214"
         },
         {
           "id": 268249,
           "name": "Vile Alchemist's Band",
           "icon": "/icons/items/inv_121_jewelry_ring01_purple.jpg",
           "slot": "Finger",
-          "type": "Rings"
+          "type": "Rings",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Finger",
+            "+565 Stamina",
+            "+28 Critical Strike",
+            "+130 Mastery",
+            "Equip: Damage taken from Deadly Venom on the Coiled Isle and within the Venomous Abyss reduced by 7%.",
+            "Requires Level 90",
+            "\"Ooh, a live subject!\""
+          ],
+          "url": "https://www.wowhead.com/item=268249"
         },
         {
           "id": 270166,
           "name": "Vashnik's Sanguine Rancor",
           "icon": "/icons/items/inv_11_0_raid_gruesomesyringe_blue.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 Agility",
+            "Equip: Your attacks have a very high chance to build sanguine rancor within you. After 15 times, the rancor erupts to scourge your target and all nearby enemies with crimson bile, dealing (25689 * 1) Shadow damage split between them. Damage increased by 30% per additional enemy, up to 150%.",
+            "If only one enemy is struck, the concentrated bile deals an additional (25689 * 25 / 100 * 1) Shadow damage over 3 sec.",
+            "Requires Level 90",
+            "\"Crimson. Viscous. Delicious.\""
+          ],
+          "url": "https://www.wowhead.com/item=270166"
         },
         {
           "id": 270161,
           "name": "Fang of Umbral Malignance",
           "icon": "/icons/items/inv_121_trinket_raid_ulatek_fang_purple.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 Intellect",
+            "Equip: Your harmful spells have a very high chance to befoul your target with Umbral Malignance, dealing (67 * 1) Shadow damage every 3 sec for 1 min, stacking up to 30 times.",
+            "Umbral Malignance bursts upon the target's death, dealing 300% of its remaining damage split between nearby enemies and applying Umbral Malignance.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270161"
         },
         {
           "id": 270926,
           "name": "Venomwoven Icon",
           "icon": "/icons/items/inv_jewelcrafting_azureserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Priest, Mage, Warlock",
+            "Use: Create a soulbound set chest item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270926"
         },
         {
           "id": 270927,
           "name": "Venomcured Icon",
           "icon": "/icons/items/inv_jewelcrafting_purpleserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Rogue, Monk, Druid, Demon Hunter",
+            "Use: Create a soulbound set chest item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270927"
         },
         {
           "id": 270928,
           "name": "Venomcast Icon",
           "icon": "/icons/items/inv_jewelcrafting_goldenserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Hunter, Shaman, Evoker",
+            "Use: Create a soulbound set chest item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270928"
         },
         {
           "id": 270929,
           "name": "Venomforged Icon",
           "icon": "/icons/items/inv_jewelcrafting_rubyserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Warrior, Paladin, Death Knight",
+            "Use: Create a soulbound set chest item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270929"
         }
       ]
     },
@@ -294,97 +797,264 @@
       "slug": "lost-explorers",
       "name": "The Lost Explorers",
       "icon": "/icons/bosses/lost-explorers.gif",
+      "url": "https://www.wowhead.com/search?q=The%20Lost%20Explorers#npcs",
       "items": [
         {
           "id": 268242,
           "name": "Errant Scrollsage's Hood",
           "icon": "/icons/items/inv_helm_cloth_raidpriestulatek_d_01.jpg",
           "slot": "Head",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Head",
+            "Cloth",
+            "41 Armor",
+            "+65 Intellect",
+            "+1,005 Stamina",
+            "+31 Critical Strike",
+            "+76 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268242"
         },
         {
           "id": 268227,
           "name": "Unpossessed Skullsash",
           "icon": "/icons/items/inv_belt_leather_raidrogueulatek_d_01.jpg",
           "slot": "Waist",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Waist",
+            "Leather",
+            "53 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+57 Critical Strike",
+            "+23 Mastery",
+            "Requires Level 90",
+            "\"Thoroughly cleansed with fish to remove all traces of possession.\""
+          ],
+          "url": "https://www.wowhead.com/item=268227"
         },
         {
           "id": 268258,
           "name": "Boots of the Reckless Wayfarer",
           "icon": "/icons/items/inv_boot_mail_raidevokerulatek_d_01.jpg",
           "slot": "Feet",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Feet",
+            "Mail",
+            "88 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+54 Critical Strike",
+            "+27 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268258"
         },
         {
           "id": 268239,
           "name": "Shellbound Bracers",
           "icon": "/icons/items/inv_bracer_plate_raiddeathknightulatek_d_01.jpg",
           "slot": "Wrist",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Wrist",
+            "Plate",
+            "105 Armor",
+            "+36 [Strength or Intellect]",
+            "+565 Stamina",
+            "+18 Critical Strike",
+            "+42 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268239"
         },
         {
           "id": 268210,
           "name": "Malevolent Spiritcudgel",
           "icon": "/icons/items/inv_mace_1h_ulatek_d_01.jpg",
           "slot": "One-Hand",
-          "type": "One-Handed Maces"
+          "type": "One-Handed Maces",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Mace",
+            "41 - 54 Damage",
+            "Speed 2.60",
+            "(18.3 damage per second)",
+            "+188 Intellect",
+            "+502 Stamina",
+            "+16 Critical Strike",
+            "+37 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268210"
         },
         {
           "id": 268200,
           "name": "Gebbo's Backup Blaster",
           "icon": "/icons/items/inv_firearm_2h_ulatek_d_01.jpg",
           "slot": "Ranged",
-          "type": "Guns"
+          "type": "Guns",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Ranged",
+            "Gun",
+            "102 - 190 Damage",
+            "Speed 3.00",
+            "(48.7 damage per second)",
+            "+65 Agility",
+            "+1,005 Stamina",
+            "+74 Haste",
+            "+33 Mastery",
+            "Requires Level 90",
+            "\"Good thing he kept it at the bottom of his bags.\""
+          ],
+          "url": "https://www.wowhead.com/item=268200"
         },
         {
           "id": 268196,
           "name": "Venom-Slashed Scuteward",
           "icon": "/icons/items/inv_shield_1h_ulatek_d_01.jpg",
           "slot": "Off Hand",
-          "type": "Shields"
+          "type": "Shields",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Off Hand",
+            "Shield",
+            "618 Armor",
+            "1545 Block",
+            "+32 Strength",
+            "+99 Intellect",
+            "+502 Stamina",
+            "+18 Critical Strike",
+            "+36 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268196"
         },
         {
           "id": 270160,
           "name": "First Mate's Shellward",
           "icon": "/icons/items/inv_cape_special_turtleshell_c_02.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 [Agility or Strength]",
+            "Use: Deploy the Shellward to absorb up to 40% of incoming damage until 121947 damage has been prevented for up to 30 sec. The Shellward hardens while you are below 40% health, reducing damage by 80% instead.",
+            "Deal 6067 Physical damage to melee attackers while the Shellward holds. (1 Min, 30 Sec Cooldown)",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270160"
         },
         {
           "id": 270164,
           "name": "Gebbo's Bottomless Bag",
           "icon": "/icons/items/inv_10_tailoring_bag1_color2.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 [Agility or Strength or Intellect]",
+            "Equip: You have a chance to pull an artifact of questionable value out of the bag when casting spells and abilities, enhancing your secondary stats in various ways. There are probably no fish left in the bag, but it's hard to be sure. (750ms cooldown)",
+            "Requires Level 90",
+            "\"Disgusting fish! How does this keep happening? I should have total control!\""
+          ],
+          "url": "https://www.wowhead.com/item=270164"
         },
         {
           "id": 270922,
           "name": "Venomwoven Remnant",
           "icon": "/icons/items/inv_jewelcrafting_azureserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Priest, Mage, Warlock",
+            "Use: Create a soulbound set shoulder item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270922"
         },
         {
           "id": 270923,
           "name": "Venomcured Remnant",
           "icon": "/icons/items/inv_jewelcrafting_purpleserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Rogue, Monk, Druid, Demon Hunter",
+            "Use: Create a soulbound set shoulder item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270923"
         },
         {
           "id": 270924,
           "name": "Venomcast Remnant",
           "icon": "/icons/items/inv_jewelcrafting_goldenserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Hunter, Shaman, Evoker",
+            "Use: Create a soulbound set shoulder item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270924"
         },
         {
           "id": 270925,
           "name": "Venomforged Remnant",
           "icon": "/icons/items/inv_jewelcrafting_rubyserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Warrior, Paladin, Death Knight",
+            "Use: Create a soulbound set shoulder item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270925"
         }
       ]
     },
@@ -392,90 +1062,241 @@
       "slug": "sszorak",
       "name": "Sszorak",
       "icon": "/icons/bosses/sszorak.gif",
+      "url": "https://www.wowhead.com/search?q=Sszorak#npcs",
       "items": [
         {
           "id": 268257,
           "name": "Caustic Chain-Wrapped Sash",
           "icon": "/icons/items/inv_belt_cloth_raidwarlockulatek_d_01.jpg",
           "slot": "Waist",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Waist",
+            "Cloth",
+            "31 Armor",
+            "+48 Intellect",
+            "+754 Stamina",
+            "+54 Haste",
+            "+26 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268257"
         },
         {
           "id": 268234,
           "name": "Ruthless Slaughtergrips",
           "icon": "/icons/items/inv_glove_leather_raiddemonhunterulatek_d_01.jpg",
           "slot": "Hands",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Hands",
+            "Leather",
+            "53 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+26 Critical Strike",
+            "+55 Mastery",
+            "Requires Level 90",
+            "\"Slaughter!\""
+          ],
+          "url": "https://www.wowhead.com/item=268234"
         },
         {
           "id": 268233,
           "name": "Ferocious Scaleboots",
           "icon": "/icons/items/inv_boot_mail_raidhunterulatek_d_01.jpg",
           "slot": "Feet",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Feet",
+            "Mail",
+            "88 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+25 Haste",
+            "+55 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268233"
         },
         {
           "id": 268201,
           "name": "Venomous Boneglaive",
           "icon": "/icons/items/inv_glaive_1h_ulatek_d_01.jpg",
           "slot": "One-Hand",
-          "type": "Warglaives"
+          "type": "Warglaives",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Warglaive",
+            "73 - 117 Damage",
+            "Speed 2.60",
+            "(36.5 damage per second)",
+            "+156 Intellect",
+            "+32 [Agility or Intellect]",
+            "+502 Stamina",
+            "+16 Critical Strike",
+            "+37 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268201"
         },
         {
           "id": 268206,
           "name": "Slithering Savage's Gavel",
           "icon": "/icons/items/inv_mace_1h_ulatek_d_01.jpg",
           "slot": "One-Hand",
-          "type": "One-Handed Maces"
+          "type": "One-Handed Maces",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Mace",
+            "83 - 107 Damage",
+            "Speed 2.60",
+            "(36.5 damage per second)",
+            "+32 Agility",
+            "+502 Stamina",
+            "+37 Critical Strike",
+            "+16 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268206"
         },
         {
           "id": 268252,
           "name": "Apex Brute's Claw Ring",
           "icon": "/icons/items/inv_121_jewelry_ring03_red.jpg",
           "slot": "Finger",
-          "type": "Rings"
+          "type": "Rings",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Finger",
+            "+565 Stamina",
+            "+132 Critical Strike",
+            "+26 Haste",
+            "Equip: Damage taken from Deadly Venom on the Coiled Isle and within the Venomous Abyss reduced by 7%.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268252"
         },
         {
           "id": 270163,
           "name": "Sszorak's Ferocity",
           "icon": "/icons/items/inv_121_trinket_raid_ulatek_ulatekclaw.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 Strength",
+            "Equip: You have a high chance to follow up your attacks with Ravage, Mutilate, or Tempest based on the number of nearby enemies.",
+            "Your killer instincts are honed, triggering this effect on your next attack upon defeating an enemy. May only occur once per 10 sec.",
+            "Requires Level 90",
+            "\"Fight. Scream. Die.\""
+          ],
+          "url": "https://www.wowhead.com/item=270163"
         },
         {
           "id": 270174,
           "name": "Idol of the Howling Nexus",
           "icon": "/icons/items/inv_jewelcrafting_jadeserpent.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+76 Mastery",
+            "Equip: Dodging, parrying, or blocking has a high chance to call bolstering winds, increasing your Strength or Agility by 187 and Speed by 76 for 12 sec.",
+            "If you have not dodged, parried, or blocked for 15 sec, this effect is triggered immediately. May only occur once per 1 min.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270174"
         },
         {
           "id": 270918,
           "name": "Venomwoven Relic",
           "icon": "/icons/items/inv_jewelcrafting_azureserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Priest, Mage, Warlock",
+            "Use: Create a soulbound set leg item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270918"
         },
         {
           "id": 270919,
           "name": "Venomcured Relic",
           "icon": "/icons/items/inv_jewelcrafting_purpleserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Rogue, Monk, Druid, Demon Hunter",
+            "Use: Create a soulbound set leg item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270919"
         },
         {
           "id": 270920,
           "name": "Venomcast Relic",
           "icon": "/icons/items/inv_jewelcrafting_goldenserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Hunter, Shaman, Evoker",
+            "Use: Create a soulbound set leg item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270920"
         },
         {
           "id": 270921,
           "name": "Venomforged Relic",
           "icon": "/icons/items/inv_jewelcrafting_rubyserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Warrior, Paladin, Death Knight",
+            "Use: Create a soulbound set leg item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270921"
         }
       ]
     },
@@ -483,90 +1304,236 @@
       "slug": "twin-fangs",
       "name": "The Twin Fangs",
       "icon": "/icons/bosses/twin-fangs.gif",
+      "url": "https://www.wowhead.com/search?q=The%20Twin%20Fangs#npcs",
       "items": [
         {
           "id": 268241,
           "name": "Ornaments of the Eternal Coil",
           "icon": "/icons/items/inv_shoulder_cloth_raidmageulatek_d_01.jpg",
           "slot": "Shoulder",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Shoulder",
+            "Cloth",
+            "38 Armor",
+            "+48 Intellect",
+            "+754 Stamina",
+            "+57 Haste",
+            "+23 Versatility",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268241"
         },
         {
           "id": 268261,
           "name": "Bespittled Slitherslippers",
           "icon": "/icons/items/inv_boot_leather_raidmonkulatek_d_01.jpg",
           "slot": "Feet",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Feet",
+            "Leather",
+            "59 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+56 Critical Strike",
+            "+25 Haste",
+            "Requires Level 90",
+            "\"Quite luxurious, despite the spittle.\""
+          ],
+          "url": "https://www.wowhead.com/item=268261"
         },
         {
           "id": 268223,
           "name": "Ophidian Fangmail",
           "icon": "/icons/items/inv_chest_mail_raidhunterulatek_d_01.jpg",
           "slot": "Chest",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Chest",
+            "Mail",
+            "140 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+35 Critical Strike",
+            "+72 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268223"
         },
         {
           "id": 268220,
           "name": "Scaleplate Strangulators",
           "icon": "/icons/items/inv_glove_plate_raidpaladinulatek_d_01.jpg",
           "slot": "Hands",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Hands",
+            "Plate",
+            "119 Armor",
+            "+48 [Strength or Intellect]",
+            "+754 Stamina",
+            "+53 Critical Strike",
+            "+27 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268220"
         },
         {
           "id": 268264,
           "name": "Ravenous Feaster's Fang",
           "icon": "/icons/items/inv_knife_1h_ulatek_d_02.jpg",
           "slot": "One-Hand",
-          "type": "Daggers"
+          "type": "Daggers",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Dagger",
+            "49 - 83 Damage",
+            "Speed 1.80",
+            "(36.7 damage per second)",
+            "+32 Agility",
+            "+502 Stamina",
+            "+18 Critical Strike",
+            "+35 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268264"
         },
         {
           "id": 268251,
           "name": "Amulet of the Twin Fangs",
           "icon": "/icons/items/inv_121_jewelry_neck01_red.jpg",
           "slot": "Neck",
-          "type": "Amulets"
+          "type": "Amulets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Neck",
+            "+565 Stamina",
+            "+24 Haste",
+            "+134 Mastery",
+            "Equip: Damage taken from Deadly Venom on the Coiled Isle and within the Venomous Abyss reduced by 7%.",
+            "Requires Level 90",
+            "\"The hunger of Ula'tek's most ancient spawn grew until the very end.\""
+          ],
+          "url": "https://www.wowhead.com/item=268251"
         },
         {
           "id": 270171,
           "name": "Preternatural Antivenom",
           "icon": "/icons/items/inv_11_0_dungeon_tentaclevial_green.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+76 Critical Strike",
+            "Equip: Your healing has a high chance to infuse the target with Preternatural Antivenom for 30 sec, healing your ally for 75% of any damage they take until 57285 health has been restored.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270171"
         },
         {
           "id": 270170,
           "name": "Vexhul's Everflowing Gland",
           "icon": "/icons/items/inv_11_0_misc_organmass_color3.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 Intellect",
+            "Use: Unleash a deluge of caustic venom, dealing (14629 * 1 / 0.200000003) Nature damage to your target. Damage increased by 1% for every 1% health the enemy has remaining.",
+            "Defeat enemies to catalyze their essential fluids into additional venom, reducing this cooldown by 5 sec. (3 Min Cooldown)",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270170"
         },
         {
           "id": 270914,
           "name": "Venomwoven Effigy",
           "icon": "/icons/items/inv_jewelcrafting_azureserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Priest, Mage, Warlock",
+            "Use: Create a soulbound set head item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270914"
         },
         {
           "id": 270915,
           "name": "Venomcured Effigy",
           "icon": "/icons/items/inv_jewelcrafting_purpleserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Rogue, Monk, Druid, Demon Hunter",
+            "Use: Create a soulbound set head item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270915"
         },
         {
           "id": 270916,
           "name": "Venomcast Effigy",
           "icon": "/icons/items/inv_jewelcrafting_goldenserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Hunter, Shaman, Evoker",
+            "Use: Create a soulbound set head item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270916"
         },
         {
           "id": 270917,
           "name": "Venomforged Effigy",
           "icon": "/icons/items/inv_jewelcrafting_rubyserpent.jpg",
           "slot": null,
-          "type": "Tier token"
+          "type": "Tier token",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Classes: Warrior, Paladin, Death Knight",
+            "Use: Create a soulbound set head item appropriate for your class.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270917"
         }
       ]
     },
@@ -574,97 +1541,298 @@
       "slug": "coiled-altar",
       "name": "The Coiled Altar",
       "icon": "/icons/bosses/coiled-altar.gif",
+      "url": "https://www.wowhead.com/search?q=The%20Coiled%20Altar#npcs",
       "items": [
         {
           "id": 268243,
           "name": "Grasps of the Eternal Shadow",
           "icon": "/icons/items/inv_glove_cloth_raidwarlockulatek_d_01.jpg",
           "slot": "Hands",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Hands",
+            "Cloth",
+            "31 Armor",
+            "+48 Intellect",
+            "+754 Stamina",
+            "+24 Critical Strike",
+            "+56 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268243"
         },
         {
           "id": 268255,
           "name": "Cackling Soultreads",
           "icon": "/icons/items/inv_boot_cloth_raidmageulatek_d_01.jpg",
           "slot": "Feet",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Feet",
+            "Cloth",
+            "35 Armor",
+            "+48 Intellect",
+            "+754 Stamina",
+            "+54 Haste",
+            "+26 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268255"
         },
         {
           "id": 268256,
           "name": "Sash of the Forlorn Vessel",
           "icon": "/icons/items/inv_belt_leather_raiddruidulatek_d_01.jpg",
           "slot": "Waist",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Waist",
+            "Leather",
+            "53 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+25 Haste",
+            "+55 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268256"
         },
         {
           "id": 268225,
           "name": "Coiled Hex Legguards",
           "icon": "/icons/items/inv_pant_leather_raidmonkulatek_d_01.jpg",
           "slot": "Legs",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Legs",
+            "Leather",
+            "83 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+34 Haste",
+            "+73 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268225"
         },
         {
           "id": 268237,
           "name": "Cuisses of the Uncoiled Union",
           "icon": "/icons/items/inv_pant_mail_raidevokerulatek_d_01.jpg",
           "slot": "Legs",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Legs",
+            "Mail",
+            "123 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+74 Haste",
+            "+33 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268237"
         },
         {
           "id": 268222,
           "name": "Reckless Spirit Breastplate",
           "icon": "/icons/items/inv_chest_plate_raidwarriorulatek_d_01.jpg",
           "slot": "Chest",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Chest",
+            "Plate",
+            "211 Armor",
+            "+65 [Strength or Intellect]",
+            "+1,005 Stamina",
+            "+76 Haste",
+            "+31 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268222"
         },
         {
           "id": 268259,
           "name": "Girdle of Toxic Regret",
           "icon": "/icons/items/inv_belt_plate_raidpaladinulatek_d_01.jpg",
           "slot": "Waist",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Waist",
+            "Plate",
+            "119 Armor",
+            "+48 [Strength or Intellect]",
+            "+754 Stamina",
+            "+57 Critical Strike",
+            "+24 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268259"
         },
         {
           "id": 268253,
           "name": "Silken Voodoo Drape",
           "icon": "/icons/items/inv_cape_leather_raidrogueulatek_d_01.jpg",
           "slot": "Back",
-          "type": "Cloaks"
+          "type": "Cloaks",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Back",
+            "38 Armor",
+            "+36 [Agility or Strength or Intellect]",
+            "+565 Stamina",
+            "+18 Haste",
+            "+42 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268253"
         },
         {
           "id": 268211,
           "name": "Baleful Hexblade",
           "icon": "/icons/items/inv_sword_1h_ulatek_d_01.jpg",
           "slot": "One-Hand",
-          "type": "One-Handed Swords"
+          "type": "One-Handed Swords",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "One-Hand",
+            "Sword",
+            "35 - 60 Damage",
+            "Speed 2.60",
+            "(18.3 damage per second)",
+            "+188 Intellect",
+            "+502 Stamina",
+            "+36 Haste",
+            "+17 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268211"
         },
         {
           "id": 268209,
           "name": "Aman'muso, Warlord's Vengeance",
           "icon": "/icons/items/inv_axe_1h_ulatek_d_01.jpg",
           "slot": "Main Hand",
-          "type": "One-Handed Axes"
+          "type": "One-Handed Axes",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Main Hand",
+            "Axe",
+            "66 - 124 Damage",
+            "Speed 2.60",
+            "(36.5 damage per second)",
+            "+32 [Agility or Strength]",
+            "+502 Stamina",
+            "+16 Haste",
+            "+37 Mastery",
+            "Equip: Your attacks have a high chance to apply Venomfang, dealing (221 * 6 * 1) Nature damage over 6 sec before bursting to deal 581 Nature damage to nearby enemies. Multiple applications may overlap.",
+            "Requires Level 90",
+            "\"Do you submit to de loa, or do de loa submit to you?\"",
+            "Bite of Zul'jan (0/3)Zul'jin's Guillotine Technique",
+            "Maze-roa, Warlord's Fury",
+            "(2) Set : Perfect your Guillotine technique to ricochet to a second nearby enemy, dealing 100% of its damage and applying Venomfang to both targets."
+          ],
+          "url": "https://www.wowhead.com/item=268209"
         },
         {
           "id": 268213,
           "name": "Maze-roa, Warlord's Fury",
           "icon": "/icons/items/inv_axe_2h_ulatek_d_01.jpg",
           "slot": "Two-Hand",
-          "type": "Two-Handed Axes"
+          "type": "Two-Handed Axes",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Two-Hand",
+            "Axe",
+            "113 - 236 Damage",
+            "Speed 3.60",
+            "(48.5 damage per second)",
+            "+65 [Agility or Strength]",
+            "+1,005 Stamina",
+            "+76 Critical Strike",
+            "+31 Mastery",
+            "Equip: Your attacks have a high chance to apply Venomfang, dealing (221 * 6 * 1) Nature damage over 6 sec before bursting to deal 581 Nature damage to nearby enemies. Multiple applications may overlap.",
+            "Requires Level 90",
+            "\"De loa say our grandfather, de great Zul'jin, betrayed them. But why believe them?\"",
+            "Bite of Zul'jan (0/3)Zul'jin's Guillotine Technique",
+            "Aman'muso, Warlord's Vengeance",
+            "(2) Set : Perfect your Guillotine technique to ricochet to a second nearby enemy, dealing 100% of its damage and applying Venomfang to both targets."
+          ],
+          "url": "https://www.wowhead.com/item=268213"
         },
         {
           "id": 270169,
           "name": "Hex Lord's Dooming Idol",
           "icon": "/icons/items/inv_archaeology_orcclans_crackedidol.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+76 Haste",
+            "Equip: Your spells afflict you with Hex Lord's Doom, draining your Intellect by 1 up to 30 times. This effect may occur once every 6 sec. (6s cooldown)",
+            "Use: Consume the power of Hex Lord's Doom, increasing your Intellect by 12 per stack for 30 sec. (30 Sec Cooldown)",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270169"
         },
         {
           "id": 270173,
           "name": "Zul'jin's Guillotine Technique",
           "icon": "/icons/items/inv_121_trinket_raid_ulatek_trolltablet.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+61 [Agility or Strength]",
+            "Equip: You have a chance to follow up your attacks with Guillotine, hurling a massive axe in an arc at your target to deal (11142 * 1) Physical damage.",
+            "Damage increased by 2% for every 1% health the target is missing.",
+            "Requires Level 90",
+            "\"D'you want axe?\"",
+            "Bite of Zul'jan (0/3)Zul'jin's Guillotine Technique",
+            "Aman'muso, Warlord's Vengeance",
+            "Maze-roa, Warlord's Fury",
+            "(2) Set : Perfect your Guillotine technique to ricochet to a second nearby enemy, dealing 100% of its damage and applying Venomfang to both targets."
+          ],
+          "url": "https://www.wowhead.com/item=270173"
         }
       ]
     },
@@ -672,104 +1840,301 @@
       "slug": "ulatek",
       "name": "Ula'tek",
       "icon": "/icons/bosses/ulatek.gif",
+      "url": "https://www.wowhead.com/search?q=Ula'tek#npcs",
       "items": [
         {
           "id": 271874,
           "name": "Venomkeeper's Horrific Cowl",
           "icon": "/icons/items/inv_helm_cloth_raidwarlockulatek_d_01.jpg",
           "slot": "Head",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Head",
+            "Cloth",
+            "41 Armor",
+            "+65 Intellect",
+            "+1,005 Stamina",
+            "+107 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=271874"
         },
         {
           "id": 271875,
           "name": "Gaze of the Coiled Watcher",
           "icon": "/icons/items/inv_helm_leather_raiddruidulatek_d_01.jpg",
           "slot": "Head",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Head",
+            "Leather",
+            "71 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+107 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=271875"
         },
         {
           "id": 271876,
           "name": "Awoken Dreadfang Cuirass",
           "icon": "/icons/items/inv_chest_mail_raidevokerulatek_d_01.jpg",
           "slot": "Chest",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Chest",
+            "Mail",
+            "140 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+107 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=271876"
         },
         {
           "id": 271878,
           "name": "Chausses of Unbound Rancor",
           "icon": "/icons/items/inv_pant_plate_raiddeathknightulatek_d_01.jpg",
           "slot": "Legs",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Legs",
+            "Plate",
+            "184 Armor",
+            "+65 [Strength or Intellect]",
+            "+1,005 Stamina",
+            "+107 Critical Strike",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=271878"
         },
         {
           "id": 268202,
           "name": "Jaw of the Shackled Goddess",
           "icon": "/icons/items/inv_sword_1h_ulatek_d_01.jpg",
           "slot": "One-Hand",
-          "type": "One-Handed Swords"
+          "type": "One-Handed Swords",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "One-Hand",
+            "Sword",
+            "71 - 119 Damage",
+            "Speed 2.60",
+            "(36.5 damage per second)",
+            "+32 Strength",
+            "+502 Stamina",
+            "+54 Haste",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268202"
         },
         {
           "id": 268215,
           "name": "Abyssal Broodfiend's Bardiche",
           "icon": "/icons/items/inv_polearm_2h_ulatek_d_01.jpg",
           "slot": "Two-Hand",
-          "type": "Polearms"
+          "type": "Polearms",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Two-Hand",
+            "Polearm",
+            "122 - 228 Damage",
+            "Speed 3.60",
+            "(48.6 damage per second)",
+            "+65 Agility",
+            "+1,005 Stamina",
+            "+107 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268215"
         },
         {
           "id": 268207,
           "name": "Caustic Repose Greatbow",
           "icon": "/icons/items/inv_bow_1h_ulatek_d_01.jpg",
           "slot": "Ranged",
-          "type": "Bows"
+          "type": "Bows",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Ranged",
+            "Bow",
+            "123 - 168 Damage",
+            "Speed 3.00",
+            "(48.5 damage per second)",
+            "+65 Agility",
+            "+1,005 Stamina",
+            "+107 Critical Strike",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268207"
         },
         {
           "id": 271093,
           "name": "Zatha'tek, Breath of Corruption",
           "icon": "/icons/items/inv_knife_1h_ulatekfang_d_01_poison.jpg",
           "slot": "One-Hand",
-          "type": "Daggers"
+          "type": "Daggers",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "One-Hand",
+            "Dagger",
+            "46 - 86 Damage",
+            "Speed 1.80",
+            "(36.7 damage per second)",
+            "+32 Agility",
+            "+502 Stamina",
+            "+54 Critical Strike",
+            "Equip: Your attacks have a chance to inflict Breath of Corruption, dealing (3672 * 1) Nature damage and rending a Necrotic Tear that persists until death and increases the damage of this effect by 5%, up to 10 times.",
+            "Requires Level 90",
+            "\"Bury dem. They must never know de price we paid.\""
+          ],
+          "url": "https://www.wowhead.com/item=271093"
         },
         {
           "id": 271092,
           "name": "Jan'thrazet, the Soul Fang",
           "icon": "/icons/items/inv_knife_1h_ulatekfang_d_01_spirit.jpg",
           "slot": "One-Hand",
-          "type": "Daggers"
+          "type": "Daggers",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "One-Hand",
+            "Dagger",
+            "24 - 41 Damage",
+            "Speed 1.80",
+            "(18.1 damage per second)",
+            "+188 Intellect",
+            "+502 Stamina",
+            "+54 Haste",
+            "Equip: Your spells have a chance to drain a nearby enemy's will, reducing their cast speed by 10% and increasing your Haste by 71 for 12 sec.",
+            "Requires Level 90",
+            "\"Upon de bones of each Amani's sacrifice, our empire will rise.\""
+          ],
+          "url": "https://www.wowhead.com/item=271092"
         },
         {
           "id": 268265,
           "name": "Aqirbane Reliquary",
           "icon": "/icons/items/inv_121_jewelry_neck03_green.jpg",
           "slot": "Neck",
-          "type": "Amulets"
+          "type": "Amulets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Neck",
+            "+565 Stamina",
+            "+40 Critical Strike",
+            "+40 Haste",
+            "+40 Versatility",
+            "+40 Mastery",
+            "Prismatic Socket",
+            "Equip: Damage taken from Deadly Venom on the Coiled Isle and within the Venomous Abyss reduced by 7%.",
+            "Requires Level 90",
+            "\"The aqir fled before her vicious onslaught, but the rivers of venom left in her wake were indiscriminate.\""
+          ],
+          "url": "https://www.wowhead.com/item=268265"
         },
         {
           "id": 270168,
           "name": "Font of Venomous Rage",
           "icon": "/icons/items/inv_10_dungeonjewelry_dragon_trinket_3djardintrophy_green.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+76 Mastery",
+            "Use: Channel a torrent of venomous rage over 2 sec, dealing (1 * 306138) Nature damage to your target and splattering all nearby enemies for (1 * 53876) Nature damage. Damage reduced beyond 8 targets. (4 Min Cooldown)",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270168"
         },
         {
           "id": 270175,
           "name": "Voracious Heart of Ula'tek",
           "icon": "/icons/items/inv_121_trinket_raid_ulatek_heart.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+76 Critical Strike",
+            "Use: Bite the heart and embrace the ravening hunger, gaining 150 Strength or Agility for 20 sec.",
+            "While the hunger persists, gain a very high chance to devour a morsel of your target with every attack, dealing 3525 Physical damage and further increasing your Strength or Agility by 17. (1 Min, 30 Sec Cooldown)",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270175"
         },
         {
           "id": 270909,
           "name": "Slumbering Coil Curio",
           "icon": "/icons/items/rogue_paralytic_poison.jpg",
           "slot": null,
-          "type": "Reagents"
+          "type": "Reagents",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Requires Level 90",
+            "\"Find Kirana near the Catalyst in Silvermoon to trade this for powerful class set armor.\""
+          ],
+          "url": "https://www.wowhead.com/item=270909"
         },
         {
           "id": 275658,
           "name": "Primeval Skyfriend",
           "icon": "/icons/items/inv_flyingserpentmount.jpg",
           "slot": null,
-          "type": "Mounts"
+          "type": "Mounts",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 10",
+            "Binds when picked up",
+            "Mount (Account-wide)",
+            "Use: Teaches you how to summon this mount.",
+            "Summons and dismisses this mount.",
+            "Requires level 1 to 90 (90)",
+            "Requires Apprentice Riding",
+            "\"The most vicious elder skyfiends lurk within the confines of the Venomous Abyss, surfacing only to stalk prey across the shores of Atal'Utek before returning to their fetid lairs. This one has become your sky-friend.\"",
+            "Drop: The Venomous Abyss",
+            "Location: Ula'tek (Mythic)"
+          ],
+          "url": "https://www.wowhead.com/item=275658"
         }
       ]
     },
@@ -777,104 +2142,303 @@
       "slug": "nymrissa",
       "name": "Nymrissa Wavecaller",
       "icon": "/icons/bosses/nymrissa.gif",
+      "url": "https://www.wowhead.com/search?q=Nymrissa%20Wavecaller#npcs",
       "items": [
         {
           "id": 268221,
           "name": "Tidebound Sorcereress's Robes",
           "icon": "/icons/items/inv_robe_cloth_raidwarlockulatek_d_01.jpg",
           "slot": "Chest",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Chest",
+            "Cloth",
+            "55 Armor",
+            "+65 Intellect",
+            "+1,005 Stamina",
+            "+72 Critical Strike",
+            "+36 Mastery",
+            "Durability 165 / 165",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268221"
         },
         {
           "id": 268232,
           "name": "Cincture of the Abyssal Grotto",
           "icon": "/icons/items/inv_belt_cloth_raidmageulatek_d_01.jpg",
           "slot": "Waist",
-          "type": "Cloth Armor"
+          "type": "Cloth Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Waist",
+            "Cloth",
+            "31 Armor",
+            "+48 Intellect",
+            "+754 Stamina",
+            "+57 Critical Strike",
+            "+23 Versatility",
+            "Durability 55 / 55",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268232"
         },
         {
           "id": 268225,
           "name": "Coiled Hex Legguards",
           "icon": "/icons/items/inv_pant_leather_raidmonkulatek_d_01.jpg",
           "slot": "Legs",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Legs",
+            "Leather",
+            "83 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+34 Haste",
+            "+73 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268225"
         },
         {
           "id": 268247,
           "name": "Breakwater Boots",
           "icon": "/icons/items/inv_boot_leather_raiddemonhunterulatek_d_01.jpg",
           "slot": "Feet",
-          "type": "Leather Armor"
+          "type": "Leather Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Feet",
+            "Leather",
+            "59 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+53 Haste",
+            "+28 Versatility",
+            "Durability 80 / 80",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268247"
         },
         {
           "id": 268217,
           "name": "Rising Tide Wristguards",
           "icon": "/icons/items/inv_bracer_mail_raidhunterulatek_d_01.jpg",
           "slot": "Wrist",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Wrist",
+            "Mail",
+            "70 Armor",
+            "+36 [Agility or Intellect]",
+            "+565 Stamina",
+            "+19 Critical Strike",
+            "+42 Mastery",
+            "Durability 55 / 55",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268217"
         },
         {
           "id": 268238,
           "name": "Grips of Swirling Fury",
           "icon": "/icons/items/inv_glove_mail_raidevokerulatek_d_01.jpg",
           "slot": "Hands",
-          "type": "Mail Armor"
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Hands",
+            "Mail",
+            "79 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+52 Critical Strike",
+            "+28 Haste",
+            "Durability 55 / 55",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268238"
         },
         {
           "id": 268226,
           "name": "Swelling Sea Spaulders",
           "icon": "/icons/items/inv_shoulder_plate_raidpaladinulatek_d_01.jpg",
           "slot": "Shoulder",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Shoulder",
+            "Plate",
+            "145 Armor",
+            "+48 [Strength or Intellect]",
+            "+754 Stamina",
+            "+57 Critical Strike",
+            "+24 Mastery",
+            "Durability 100 / 100",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268226"
         },
         {
           "id": 268244,
           "name": "Forgotten Grotto Girdle",
           "icon": "/icons/items/inv_belt_plate_raiddeathknightulatek_d_01.jpg",
           "slot": "Waist",
-          "type": "Plate Armor"
+          "type": "Plate Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Waist",
+            "Plate",
+            "119 Armor",
+            "+48 [Strength or Intellect]",
+            "+754 Stamina",
+            "+57 Haste",
+            "+24 Versatility",
+            "Durability 55 / 55",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268244"
         },
         {
           "id": 268199,
           "name": "Tidepiercer's Bubble Popper",
           "icon": "/icons/items/inv_staff_2h_ulatek_d_01.jpg",
           "slot": "Two-Hand",
-          "type": "Staves"
+          "type": "Staves",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Two-Hand",
+            "Staff",
+            "148 - 201 Damage",
+            "Speed 3.60",
+            "(48.5 damage per second)",
+            "+65 Agility",
+            "+1,005 Stamina",
+            "+73 Critical Strike",
+            "+34 Versatility",
+            "Durability 120 / 120",
+            "Requires Level 90",
+            "\"Pop, pop, pop.\""
+          ],
+          "url": "https://www.wowhead.com/item=268199"
         },
         {
           "id": 268262,
           "name": "Bubblefin Splash Guard",
           "icon": "/icons/items/inv_shield_1h_ulatek_d_01.jpg",
           "slot": "Off Hand",
-          "type": "Shields"
+          "type": "Shields",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Off Hand",
+            "Shield",
+            "618 Armor",
+            "1545 Block",
+            "+32 Strength",
+            "+99 Intellect",
+            "+502 Stamina",
+            "+18 Haste",
+            "+36 Mastery",
+            "Durability 120 / 120",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268262"
         },
         {
           "id": 268263,
           "name": "Frostscale's Mystic Frond",
           "icon": "/icons/items/inv_offhand_1h_ulatek_d_01.jpg",
           "slot": "Held In Off-hand",
-          "type": "Off-hand Frills"
+          "type": "Off-hand Frills",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Held In Off-hand",
+            "+99 Intellect",
+            "+502 Stamina",
+            "+36 Critical Strike",
+            "+18 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268263"
         },
         {
           "id": 268266,
           "name": "Alluring Bubbleband",
           "icon": "/icons/items/inv_70_raid_ring8c.jpg",
           "slot": "Finger",
-          "type": "Rings"
+          "type": "Rings",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Finger",
+            "+565 Stamina",
+            "+123 Haste",
+            "+35 Versatility",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268266"
         },
         {
           "id": 270167,
           "name": "Wavecaller's Seastone",
           "icon": "/icons/items/inv_tradeskillitem_sorcererswater.jpg",
           "slot": "Trinket",
-          "type": "Trinkets"
+          "type": "Trinkets",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Unique-Equipped",
+            "Trinket",
+            "+76 Haste",
+            "Equip: Your spells have a high chance to call to the sea, granting Tidal Insight to increase your Intellect by 22 up to 6 times. After reaching its peak, your spells instead diminish Tidal Insight before beginning the cycle anew.",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=270167"
         },
         {
           "id": 279112,
           "name": "Clumped Asteroidea",
           "icon": "/icons/items/8033308.jpg",
           "slot": null,
-          "type": "Decor"
+          "type": "Decor",
+          "quality": 3,
+          "tooltip": [
+            "5Clumped Asteroidea",
+            "Housing Decor",
+            "Item Level 1",
+            "Binds to Warband",
+            "Use: Add this Decor to your House Chest."
+          ],
+          "url": "https://www.wowhead.com/item=279112"
         }
       ]
     }

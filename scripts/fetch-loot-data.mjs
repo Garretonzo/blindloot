@@ -107,7 +107,29 @@ async function fetchItem(id) {
   // Tier-set tokens are classed as "Junk" by the game; label them usefully.
   if (type === 'Junk' && /^Venom(woven|cured|cast|forged) /.test(name)) type = 'Tier token';
   if (type === 'Junk' && name === 'Slumbering Coil Curio') type = 'Tier token (any slot)';
-  return { id, name, icon, slot, type };
+  const quality = Number(xml.match(/<quality id="(\d+)"/)?.[1] ?? 0);
+  const html = xml.match(/<htmlTooltip>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/htmlTooltip>/)?.[1] ?? '';
+  return { id, name, icon, slot, type, quality, tooltip: tooltipLines(html, name) };
+}
+
+/** Turn Wowhead's tooltip HTML into plain text lines (what the in-game tooltip shows). */
+function tooltipLines(html, name) {
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<\/?(div|tr|li|p|h\d|td|th|table)\b[^>]*>|<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+  return text
+    // Wowhead glues some inline spans together ("Binds when picked upTwo-Hand"); split them.
+    .replace(/(picked up|when equipped|Unique-Equipped|Unique)(?=[A-Z])/g, '$1\n')
+    .split('\n')
+    .map((l) => l.replace(/\s+/g, ' ').trim())
+    .filter((l) => l && l !== name && !/^Sell Price/i.test(l) && !/^Dropped by/i.test(l));
 }
 
 async function download(url, dest) {
@@ -151,10 +173,25 @@ for (const boss of RAID.bosses) {
     const dest = path.join(ITEM_ICON_DIR, `${item.icon}.jpg`);
     const ok = await download(`https://wow.zamimg.com/images/wow/icons/large/${item.icon}.jpg`, dest);
     if (!ok) console.warn(`! no icon for ${item.name} (${item.icon})`);
-    items.push({ id, name: item.name, icon: ok ? `/icons/items/${item.icon}.jpg` : null, slot: item.slot || null, type: item.type || null });
-    process.stdout.write(`${boss.name} :: ${item.name}\n`);
+    items.push({
+      id,
+      name: item.name,
+      icon: ok ? `/icons/items/${item.icon}.jpg` : null,
+      slot: item.slot || null,
+      type: item.type || null,
+      quality: item.quality,
+      tooltip: item.tooltip,
+      url: `https://www.wowhead.com/item=${id}`,
+    });
+    process.stdout.write(`${boss.name} :: ${item.name} (${item.tooltip.length} tooltip lines)\n`);
   }
-  out.bosses.push({ slug: boss.slug, name: boss.name, icon: bossIcon, items });
+  out.bosses.push({
+    slug: boss.slug,
+    name: boss.name,
+    icon: bossIcon,
+    url: `https://www.wowhead.com/search?q=${encodeURIComponent(boss.name)}#npcs`,
+    items,
+  });
 }
 
 await writeFile(OUT_JSON, JSON.stringify(out, null, 2) + '\n');

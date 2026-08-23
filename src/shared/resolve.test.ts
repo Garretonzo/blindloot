@@ -35,6 +35,11 @@ describe('resolveItem', () => {
     expect(r.entries.map((e) => e.roll)).toEqual([42, 7]);
   });
 
+  it('off-spec beats transmog and loses to equip', () => {
+    expect(resolveItem([p(1, 'greed'), p(2, 'offspec')], seq(100, 1)).winnerId).toBe(2);
+    expect(resolveItem([p(1, 'offspec'), p(2, 'equip')], seq(100, 1)).winnerId).toBe(2);
+  });
+
   it('dibs beats need', () => {
     const r = resolveItem([p(1, 'need'), p(2, 'dibs')]);
     expect(r.winnerId).toBe(2);

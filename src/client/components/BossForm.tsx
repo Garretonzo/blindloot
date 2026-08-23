@@ -2,6 +2,7 @@ import { Button, Group, MultiSelect, NumberInput, Select, Stack, Text, TextInput
 import { useMemo, useState } from 'react';
 import { raidById } from '../../shared/raids';
 import { Icon } from './Icon';
+import { ItemTooltip } from './ItemTooltip';
 
 interface Props {
   /** The season's boss/loot pool. */
@@ -71,7 +72,9 @@ export function BossForm({ raidId, onSubmit }: Props) {
         onChange={setPicked}
         renderOption={({ option }) => (
           <Group gap="xs" wrap="nowrap">
-            <Icon src={iconByName.get(option.value)} size="sm" />
+            <ItemTooltip raidId={raidId} name={option.value}>
+              <Icon src={iconByName.get(option.value)} size="sm" />
+            </ItemTooltip>
             <div>
               <Text size="sm">{option.label}</Text>
               {(() => {

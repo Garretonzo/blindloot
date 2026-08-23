@@ -186,6 +186,31 @@ adminRoutes.delete('/sessions/:id/items/:itemId', async (c) => {
   return c.json({ ok: true });
 });
 
+/** Every raider's pre-pick on every unresolved item, with what it will actually count as. Admin only. */
+adminRoutes.get('/sessions/:id/plans', async (c) => {
+  const sessionId = Number(c.req.param('id'));
+  const db = c.env.DB;
+  const rows = await db
+    .prepare(
+      `SELECT p.item_id, p.raider_id, r.username, p.tier FROM plans p
+       JOIN items i ON i.id = p.item_id JOIN raiders r ON r.id = p.raider_id
+       WHERE p.session_id = ? AND i.resolved_at IS NULL ORDER BY p.item_id, r.username COLLATE NOCASE`,
+    )
+    .bind(sessionId)
+    .all<{ item_id: number; raider_id: number; username: string; tier: Tier }>();
+  const elig = new Map<number, { needAvailable: boolean; canDibs: boolean }>();
+  const out: Record<number, { raiderId: number; username: string; tier: Tier; effectiveTier: Tier }[]> = {};
+  for (const p of rows.results) {
+    let e = elig.get(p.raider_id);
+    if (!e) {
+      e = await raiderEligibility(db, sessionId, p.raider_id, 0);
+      elig.set(p.raider_id, e);
+    }
+    (out[p.item_id] ??= []).push({ raiderId: p.raider_id, username: p.username, tier: p.tier, effectiveTier: demoteTier(p.tier, e) });
+  }
+  return c.json(out);
+});
+
 /** Who has pre-picked how many unresolved items — shown before running an instant batch. */
 adminRoutes.get('/sessions/:id/plans-summary', async (c) => {
   const sessionId = Number(c.req.param('id'));

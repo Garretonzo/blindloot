@@ -63,6 +63,7 @@ export const api = {
     deleteItem: (sessionId: number, itemId: number) =>
       req('DELETE', `/api/admin/sessions/${sessionId}/items/${itemId}`),
     rolls: (sessionId: number) => req<Record<number, RollEntry[]>>('GET', `/api/admin/sessions/${sessionId}/rolls`),
+    plans: (sessionId: number) => req<Record<number, PlanPreview[]>>('GET', `/api/admin/sessions/${sessionId}/plans`),
     plansSummary: (sessionId: number) =>
       req<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number }>('GET', `/api/admin/sessions/${sessionId}/plans-summary`),
     award: (sessionId: number, itemId: number, raiderId: number | null, tier: Tier | null, force = false) =>
@@ -86,6 +87,14 @@ export const api = {
     history: (seasonId: number) => req<HistoryData>('GET', `/api/admin/seasons/${seasonId}/history`),
   },
 };
+
+export interface PlanPreview {
+  raiderId: number;
+  username: string;
+  tier: Tier;
+  /** What the pick will count as today (demoted if the raider already spent Need/Dibs). */
+  effectiveTier: Tier;
+}
 
 export interface RosterRaider {
   id: number;

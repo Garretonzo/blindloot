@@ -88,6 +88,8 @@ publicRoutes.put('/sessions/:id/plans', async (c) => {
   } else {
     await db.prepare('DELETE FROM plans WHERE item_id = ? AND raider_id = ?').bind(itemId, raiderId).run();
   }
+  // Let the admin's pre-pick preview refresh live.
+  await notifySession(c.env, sessionId);
   return c.json({ ok: true });
 });
 

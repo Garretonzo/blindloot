@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Boss, Raider } from '../../shared/types';
 import { Icon } from './Icon';
 import { EmptyState } from './ItemList';
+import { ItemTooltip } from './ItemTooltip';
 import { IconUsers } from '@tabler/icons-react';
 
 interface Props {
@@ -14,11 +15,13 @@ interface Props {
   editable?: boolean;
   /** Needed for the public view to list each raider's loot won this session. */
   bosses?: Boss[];
+  /** The season's boss/loot pool, for item tooltips. */
+  raidId?: string;
   onUpdate?: (raiderId: number, patch: { username?: string; itemLevel?: number; hasDibs?: boolean; needAvailable?: boolean }) => void;
   onRemove?: (raiderId: number) => void;
 }
 
-export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosses = [], onUpdate, onRemove }: Props) {
+export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosses = [], raidId, onUpdate, onRemove }: Props) {
   if (raiders.length === 0) return <EmptyState icon={<IconUsers size={26} />} text="Nobody here yet." />;
   const ready = new Set(readyIds ?? []);
   const locked = new Set(lockedIn ?? []);
@@ -95,9 +98,11 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
                 ) : (
                   <Group gap={6}>
                     {won.map((i) => (
-                      <Badge key={i.id} size="sm" variant="light" color="gray" leftSection={<Icon src={i.icon} size={14} />}>
-                        {i.name}
-                      </Badge>
+                      <ItemTooltip key={i.id} raidId={raidId} name={i.name}>
+                        <Badge size="sm" variant="light" color="gray" leftSection={<Icon src={i.icon} size={14} />}>
+                          {i.name}
+                        </Badge>
+                      </ItemTooltip>
                     ))}
                   </Group>
                 )}

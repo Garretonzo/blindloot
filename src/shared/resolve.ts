@@ -60,7 +60,7 @@ export function rankEntries(entries: RollEntry[]): RollEntry[] {
 
 /** Top N entries per tier, each list best-first. */
 export function rankByTier(entries: RollEntry[], n = 3): Record<Tier, RollEntry[]> {
-  const out: Record<Tier, RollEntry[]> = { dibs: [], need: [], equip: [], greed: [] };
+  const out: Record<Tier, RollEntry[]> = { dibs: [], need: [], equip: [], offspec: [], greed: [] };
   for (const e of rankEntries(entries)) {
     const list = out[e.tier!];
     if (list.length < n) list.push(e);

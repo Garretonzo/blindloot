@@ -79,13 +79,14 @@ export function SessionPage() {
         </Text>
       )}
 
-      {live?.batchResults && live.phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} />}
+      {live?.batchResults && live.phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} raidId={detail.season.raid_id} />}
 
       {live && (
         <RollPanel
           live={live}
           bosses={detail.bosses}
           raiders={detail.raiders}
+          raidId={detail.season.raid_id}
           me={me}
           onChoose={(tier) => send({ type: 'choose', tier })}
           onReady={() => send({ type: 'ready' })}
@@ -130,13 +131,14 @@ export function SessionPage() {
             {live?.shuffle !== false ? ', and the order is random' : ''}. If one of them matters more, maybe think about Needing that one only. The risk is yours. 
           </Alert>
         )}
-        <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} me={me} plans={plans} onPlan={me ? setPlan : undefined} />
+        <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} raidId={detail.season.raid_id} me={me} plans={plans} onPlan={me ? setPlan : undefined} />
       </SectionCard>
 
       <SectionCard title="Raiders" right={<Text size="xs" c="dimmed">{detail.raiders.length} joined</Text>}>
         <RaiderTable
           raiders={detail.raiders}
           bosses={detail.bosses}
+          raidId={detail.season.raid_id}
           meId={me?.id}
           readyIds={live?.phase === 'ready' ? live.readyRaiderIds : undefined}
           lockedIn={live?.phase === 'open' ? live.lockedIn : undefined}

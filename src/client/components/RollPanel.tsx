@@ -1,9 +1,10 @@
 import { Badge, Button, Checkbox, Group, RingProgress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
 import { IconCheck, IconDice5, IconTrophy } from '@tabler/icons-react';
 import { SectionCard } from './SectionCard';
-import { Boss, canDibs, LiveState, Raider, Tier, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
+import { Boss, canDibs, LiveState, Raider, Tier, TIERS, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
 import { TierBadge } from './TierBadge';
 import { Icon } from './Icon';
+import { ItemTooltip } from './ItemTooltip';
 import { useCountdown } from '../useSessionSocket';
 
 export interface AdminControls {
@@ -22,9 +23,11 @@ interface Props {
   onReady: () => void;
   /** When provided (admin page) pause/skip/auto-continue controls render inside the live card. */
   adminControls?: AdminControls;
+  /** The season's boss/loot pool, for item tooltips. */
+  raidId?: string;
 }
 
-const TIERS: Tier[] = ['greed', 'equip', 'need', 'dibs'];
+
 
 /** Pause / Resume / Skip / Auto-continue row shown to the admin during both countdowns. */
 function AdminBar({ live, controls }: { live: LiveState; controls: AdminControls }) {
@@ -56,7 +59,7 @@ function AdminBar({ live, controls }: { live: LiveState; controls: AdminControls
   );
 }
 
-export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminControls }: Props) {
+export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminControls, raidId }: Props) {
   const seconds = useCountdown(live.deadline, live.pausedRemainingMs);
 
   if (live.phase === 'open' || live.phase === 'closed') return null;
@@ -104,7 +107,9 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
   const header = (
     <Group justify="space-between" wrap="nowrap">
       <Group gap="sm" wrap="nowrap">
-        <Icon src={item?.icon} size="lg" alt={item?.name} />
+        <ItemTooltip raidId={raidId} name={item?.name ?? ''}>
+          <Icon src={item?.icon} size="lg" alt={item?.name} />
+        </ItemTooltip>
         <div>
           <Group gap={6}>
             <Icon src={boss?.icon} size="xs" />
@@ -112,9 +117,11 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
               {live.currentIndex + 1} / {live.itemIds.length} · {boss?.name ?? live.lastResult?.bossName}
             </Text>
           </Group>
-          <Text fw={700} size="lg">
-            {item?.name ?? live.lastResult?.itemName}
-          </Text>
+          <ItemTooltip raidId={raidId} name={item?.name ?? ''}>
+            <Text fw={700} size="lg">
+              {item?.name ?? live.lastResult?.itemName}
+            </Text>
+          </ItemTooltip>
         </div>
       </Group>
       <RingProgress
@@ -151,7 +158,7 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
           {header}
           {adminControls && <AdminBar live={live} controls={adminControls} />}
           {me ? (
-            <SimpleGrid cols={{ base: 2, xs: 4 }}>
+            <SimpleGrid cols={{ base: 2, xs: 5 }}>
               {TIERS.map((t) => {
                 const disabled = (t === 'need' && !me.need_available) || (t === 'dibs' && !canDibs(me));
                 const selected = mine === t;

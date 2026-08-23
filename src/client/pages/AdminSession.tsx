@@ -4,7 +4,8 @@ import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { api, RosterRaider } from '../api';
+import { api, PlanPreview, RosterRaider } from '../api';
+import { PrePickPreview } from '../components/PrePickPreview';
 import { RollEntry, SessionDetail, TIER_LABEL } from '../../shared/types';
 import { useSessionSocket } from '../useSessionSocket';
 import { useRequireAdmin } from './Admin';
@@ -70,12 +71,14 @@ export function AdminSessionPage() {
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [rolls, setRolls] = useState<Record<number, RollEntry[]>>({});
   const [picks, setPicks] = useState<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number } | null>(null);
+  const [plans, setPlans] = useState<Record<number, PlanPreview[]>>({});
   const { state: live, connected, send } = useSessionSocket(sessionId, null);
 
   const refresh = useCallback(() => {
     api.session(sessionId).then(setDetail).catch(() => setDetail(null));
     api.admin.rolls(sessionId).then(setRolls).catch(() => {});
     api.admin.plansSummary(sessionId).then(setPicks).catch(() => {});
+    api.admin.plans(sessionId).then(setPlans).catch(() => {});
   }, [sessionId]);
   useEffect(() => {
     if (ok) refresh();
@@ -238,13 +241,18 @@ export function AdminSessionPage() {
         )}
       </SectionCard>
 
-      {live?.batchResults && phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} />}
+      {(phase === 'open' || phase === 'ready') && (
+        <PrePickPreview bosses={detail.bosses} raiders={detail.raiders} plans={plans} lockedIn={live?.lockedIn ?? []} raidId={detail.season.raid_id} />
+      )}
+
+      {live?.batchResults && phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} raidId={detail.season.raid_id} />}
 
       {live && (
         <RollPanel
           live={live}
           bosses={detail.bosses}
           raiders={detail.raiders}
+          raidId={detail.season.raid_id}
           me={null}
           onChoose={() => {}}
           onReady={() => {}}

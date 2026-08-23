@@ -1,7 +1,10 @@
-export type Tier = 'greed' | 'equip' | 'need' | 'dibs';
-export const TIER_RANK: Record<Tier, number> = { greed: 0, equip: 1, need: 2, dibs: 3 };
+export type Tier = 'greed' | 'offspec' | 'equip' | 'need' | 'dibs';
+export const TIER_RANK: Record<Tier, number> = { greed: 0, offspec: 1, equip: 2, need: 3, dibs: 4 };
+/** Every tier, lowest to highest. */
+export const TIERS: Tier[] = ['greed', 'offspec', 'equip', 'need', 'dibs'];
 export const TIER_LABEL: Record<Tier, string> = {
   greed: 'Transmog',
+  offspec: 'Off-spec',
   equip: 'Equip',
   need: 'Need',
   dibs: 'Dibs',
@@ -9,8 +12,9 @@ export const TIER_LABEL: Record<Tier, string> = {
 
 /** One-line meaning of each tier, shown in tooltips and on the help page. */
 export const TIER_HINT: Record<Tier, string> = {
-  greed: "It looks cool. Unlimited rolls.",
-  equip: "You'd actually wear it, main spec. If you lie and I catch you, you're out. Unlimited rolls. Equip beats Transmog.",
+  greed: 'It looks cool. Unlimited rolls.',
+  offspec: "You'd wear it for an off-spec. Unlimited rolls. Off-spec beats Transmog.",
+  equip: "You'd actually wear it, main spec. If you lie and I catch you, you're out. Unlimited rolls. Equip beats Off-spec.",
   need: 'You want it for real. One win per week (per difficulty). Need beats Equip.',
   dibs: 'More than anything. One win per season. Dibs beats Need; ties go to item level.',
 };
@@ -18,6 +22,7 @@ export const TIER_HINT: Record<Tier, string> = {
 /** Mantine color per tier, used everywhere a tier is displayed. */
 export const TIER_COLOR: Record<Tier, string> = {
   greed: 'gray',
+  offspec: 'cyan',
   equip: 'blue',
   need: 'orange',
   dibs: 'grape',
@@ -88,7 +93,15 @@ export interface RaidData {
   id: string;
   name: string;
   season: string;
-  bosses: { slug: string; name: string; icon: string | null; items: RaidItem[] }[];
+  bosses: RaidBoss[];
+}
+export interface RaidBoss {
+  slug: string;
+  name: string;
+  icon: string | null;
+  /** Wowhead page for the boss. */
+  url?: string;
+  items: RaidItem[];
 }
 export interface RaidItem {
   id: number;
@@ -96,6 +109,12 @@ export interface RaidItem {
   icon: string | null;
   slot: string | null;
   type: string | null;
+  /** WoW item quality id (0 poor … 5 legendary). */
+  quality?: number;
+  /** In-game tooltip, one line per entry. */
+  tooltip?: string[];
+  /** Wowhead page for the item. */
+  url?: string;
 }
 
 export interface SessionDetail {

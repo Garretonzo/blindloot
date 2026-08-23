@@ -22,3 +22,14 @@ export function findBoss(raidId: string, name: string) {
 export function lootFor(raidId: string, bossName: string): RaidItem[] {
   return findBoss(raidId, bossName)?.items ?? [];
 }
+
+/** Static item data (tooltip, quality, link) by name within a raid; null for custom items. */
+export function findItem(raidId: string | undefined, name: string): RaidItem | null {
+  if (!raidId) return null;
+  const n = name.trim().toLowerCase();
+  for (const b of raidById(raidId)?.bosses ?? []) {
+    const it = b.items.find((i) => i.name.toLowerCase() === n);
+    if (it) return it;
+  }
+  return null;
+}

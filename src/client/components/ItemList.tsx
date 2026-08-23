@@ -2,14 +2,15 @@ import { ActionIcon, Anchor, Autocomplete, Badge, Button, Group, Popover, Stack,
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IconSkull } from '@tabler/icons-react';
-import { Boss, canDibs, Item, LiveState, Raider, RaidItem, RollEntry, Tier, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
+import { Boss, canDibs, Item, LiveState, Raider, RaidItem, RollEntry, Tier, TIERS, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
 import { rankByTier } from '../../shared/resolve';
-import { lootFor } from '../../shared/raids';
+import { findBoss, lootFor } from '../../shared/raids';
+import { ItemTooltip } from './ItemTooltip';
 import { SubHeader } from './SectionCard';
 import { TierBadge } from './TierBadge';
 import { Icon } from './Icon';
 
-const TIERS: Tier[] = ['greed', 'equip', 'need', 'dibs'];
+
 
 interface Props {
   bosses: Boss[];
@@ -56,6 +57,7 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
         <div key={b.id}>
           <SubHeader
             icon={b.icon}
+            href={raidId ? findBoss(raidId, b.name)?.url : undefined}
             right={
               onDeleteBoss && (
                 <ActionIcon variant="subtle" color="gray" size="xs" onClick={() => onDeleteBoss(b.id)} title="Remove boss">
@@ -87,12 +89,16 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
                 >
                   <Group justify="space-between" wrap="nowrap">
                     <Group gap="xs" wrap="nowrap">
-                      <span style={wonColor ? { boxShadow: `0 0 0 2px ${wonColor}`, borderRadius: 4, display: 'inline-flex' } : { display: 'inline-flex' }}>
-                        <Icon src={i.icon} size="sm" alt={i.name} />
-                      </span>
-                      <Text size="sm" fw={isCurrent ? 700 : 400} c={isCurrent ? 'teal.2' : resolved ? 'dimmed' : undefined}>
-                        {i.name}
-                      </Text>
+                      <ItemTooltip raidId={raidId} name={i.name}>
+                        <span style={wonColor ? { boxShadow: `0 0 0 2px ${wonColor}`, borderRadius: 4, display: 'inline-flex' } : { display: 'inline-flex' }}>
+                          <Icon src={i.icon} size="sm" alt={i.name} />
+                        </span>
+                      </ItemTooltip>
+                      <ItemTooltip raidId={raidId} name={i.name}>
+                        <Text size="sm" fw={isCurrent ? 700 : 400} c={isCurrent ? 'teal.2' : resolved ? 'dimmed' : undefined}>
+                          {i.name}
+                        </Text>
+                      </ItemTooltip>
                       {isCurrent && (
                         <Badge size="xs" variant="dot" color="teal" className="blink">
                           now
@@ -147,7 +153,7 @@ export function EmptyState({ icon, text }: { icon: React.ReactNode; text: string
 /** Tiny row of four tier buttons for a raider to pre-plan an upcoming roll. */
 function PlanButtons({ me, plan, onPlan }: { me: Raider; plan: Tier | null; onPlan: (t: Tier | null) => void }) {
   return (
-    <Button.Group>
+    <Group gap={2} justify="flex-end">
       {TIERS.map((t) => {
         const disabled = (t === 'need' && !me.need_available) || (t === 'dibs' && !canDibs(me));
         const selected = plan === t;
@@ -166,7 +172,7 @@ function PlanButtons({ me, plan, onPlan }: { me: Raider; plan: Tier | null; onPl
           </Button>
         );
       })}
-    </Button.Group>
+    </Group>
   );
 }
 
@@ -185,7 +191,7 @@ function AwardDetails({
   const [open, setOpen] = useState(false);
   const [giveTo, setGiveTo] = useState<number | null>(null);
   const ranked = rankByTier(entries);
-  const order: Tier[] = ['dibs', 'need', 'equip', 'greed'];
+  const order: Tier[] = ['dibs', 'need', 'equip', 'offspec', 'greed'];
   const others = raiders.filter((r) => !entries.some((e) => e.raiderId === r.id));
   const winner = raiders.find((r) => r.id === item.winner_raider_id) ?? null;
 

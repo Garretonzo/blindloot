@@ -1,4 +1,4 @@
-import { Avatar, Card, Divider, Group, Text, Title } from '@mantine/core';
+import { Anchor, Avatar, Card, Divider, Group, Text, Title } from '@mantine/core';
 import { ReactNode } from 'react';
 
 /** Card with a teal-tinted header strip and a left accent bar. All page cards use this. */
@@ -37,7 +37,13 @@ export function SectionCard({
 }
 
 /** Sub-header inside a card (e.g. a boss name above its items). */
-export function SubHeader({ children, right, icon }: { children: ReactNode; right?: ReactNode; icon?: string | null }) {
+export function SubHeader({ children, right, icon, href }: { children: ReactNode; right?: ReactNode; icon?: string | null; href?: string }) {
+  const label = (
+    <Text size="xs" fw={700} tt="uppercase" c="teal.3" style={{ letterSpacing: '0.06em' }}>
+      {children}
+      {href && ' ↗'}
+    </Text>
+  );
   return (
     <Divider
       my="xs"
@@ -45,9 +51,13 @@ export function SubHeader({ children, right, icon }: { children: ReactNode; righ
       label={
         <Group gap="xs">
           {icon && <Avatar src={icon} size="md" radius="sm" style={{ boxShadow: '0 0 0 2px var(--mantine-color-teal-7)' }} />}
-          <Text size="xs" fw={700} tt="uppercase" c="teal.3" style={{ letterSpacing: '0.06em' }}>
-            {children}
-          </Text>
+          {href ? (
+            <Anchor href={href} target="_blank" rel="noopener noreferrer" underline="hover" title="Open on Wowhead">
+              {label}
+            </Anchor>
+          ) : (
+            label
+          )}
           {right}
         </Group>
       }

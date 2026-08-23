@@ -10,9 +10,9 @@ and countdown timers.
 
 ## Loot rules
 
-Tiers, lowest to highest: **Transmog** → **Equip** → **Need** → **Dibs**.
+Tiers, lowest to highest: **Transmog** → **Off-spec** → **Equip** → **Need** → **Dibs**.
 
-- Transmog and Equip are unlimited.
+- Transmog, Off-spec and Equip are unlimited.
 - Need: one per raider per session; consumed only when you *win* with it.
 - Dibs: one per raider per **season**; consumed only when you win with it.
   Two Dibs → higher item level wins; tie → 1-100 roll.

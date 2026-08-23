@@ -1,9 +1,9 @@
 import { Accordion, Alert, List, Stack, Table, Text, Title } from '@mantine/core';
 import { SectionCard } from '../components/SectionCard';
 import { TierBadge } from '../components/TierBadge';
-import { Tier, TIER_HINT } from '../../shared/types';
+import { TIERS, TIER_HINT } from '../../shared/types';
 
-const TIERS: Tier[] = ['greed', 'equip', 'need', 'dibs'];
+
 
 export function HelpPage() {
   return (
