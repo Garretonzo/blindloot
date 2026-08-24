@@ -180,7 +180,7 @@ export function NamePrompt() {
                 onKeyDown={(e) => e.key === 'Enter' && submit()}
               />
               <Text size="xs" c="dimmed">
-                First login — choose a password (min 4 characters). You'll use it every time you log in. Forgot it later? The loot
+                Choose a password (min 4 characters). You'll use it every time you log in. Forgot it later? The loot
                 officer can reset it.
               </Text>
             </>

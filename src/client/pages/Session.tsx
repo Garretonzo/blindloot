@@ -68,7 +68,7 @@ export function SessionPage() {
                 size="sm"
                 variant="light"
                 color={me.need_remaining > 0 ? 'orange' : 'gray'}
-                title={`Need charges left this session (a Dibs win also spends one). Your admin allows ${me.need_limit} per session.`}
+                title={`Need charges left this session (a Dibs win also spends one). Your raid leader allows ${me.need_limit} per session.`}
               >
                 Need {me.need_remaining}/{me.need_limit}
               </Badge>
@@ -78,8 +78,8 @@ export function SessionPage() {
                 color={me.dibs_remaining > 0 && me.need_remaining > 0 ? 'grape' : 'gray'}
                 title={
                   me.dibs_remaining > 0 && me.need_remaining === 0
-                    ? `Dibs charges left this season — but Dibs needs an available Need charge, so it's locked right now.`
-                    : `Dibs charges left this season. Your admin allows ${me.dibs_limit} per season.`
+                    ? `Dibs charges left this season (but Dibs require an available Need charge, so it's locked right now).`
+                    : `Dibs charges left this season. Your raid leader allows ${me.dibs_limit} per season.`
                 }
               >
                 Dibs {me.dibs_remaining}/{me.dibs_limit}
