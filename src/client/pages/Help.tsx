@@ -96,7 +96,7 @@ export function HelpPage() {
             at it during a break, go ahead. But the raid does not wait for it.
           </List.Item>
           <List.Item>
-            <b>After the raid</b>, open the session and enter your item level. Your real one... it's shown to everyone btw, and it decides
+            <b>After the raid</b>, open the session and enter your highest item level (character panel mouse-over tooltip). It's shown to everyone btw, so don't try to lie, and it decides
             Dibs ties. (The loot officer can also add you or fix it.)
           </List.Item>
           <List.Item>

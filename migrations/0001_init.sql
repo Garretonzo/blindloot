@@ -1,15 +1,21 @@
 -- Loot distribution schema.
 --
 -- Hierarchy: seasons → sessions → bosses → items.
--- Raiders are a site-wide roster. Their Dibs is tracked per season; item level, Need and the
--- Dibs lock are tracked per session. Every roll (all participants) and every pre-planned choice
--- is recorded so history can be reviewed and winners re-awarded.
+-- Raiders are a site-wide roster; their password is set on first login (NULL until then;
+-- an admin reset returns it to NULL). Loot charges are admin-configurable per season:
+-- Dibs charges span the season, Need wins are per session, and a Dibs win also spends a
+-- Need charge (so Dibs is locked whenever Need is exhausted). Remaining charges are
+-- derived as limit − recorded wins, so re-awards and limit changes stay consistent.
+-- Every roll (all participants) and every pre-planned choice is recorded so history can
+-- be reviewed and winners re-awarded.
 
 CREATE TABLE seasons (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  name       TEXT    NOT NULL,
-  raid_id    TEXT    NOT NULL,                  -- bundled boss/loot pool (src/shared/raids)
-  created_at INTEGER NOT NULL
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  name             TEXT    NOT NULL,
+  raid_id          TEXT    NOT NULL,             -- bundled boss/loot pool (src/shared/raids)
+  created_at       INTEGER NOT NULL,
+  dibs_per_season  INTEGER NOT NULL DEFAULT 1,   -- Dibs charges each raider gets for the whole season
+  need_per_session INTEGER NOT NULL DEFAULT 1    -- Need wins each raider is allowed per session
 );
 
 CREATE TABLE sessions (
@@ -22,27 +28,27 @@ CREATE TABLE sessions (
 
 -- Site-wide roster. Username is the identity (case-insensitive).
 CREATE TABLE raiders (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  username   TEXT    NOT NULL UNIQUE COLLATE NOCASE,
-  created_at INTEGER NOT NULL
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  username      TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+  created_at    INTEGER NOT NULL,
+  password_hash TEXT                            -- pbkdf2v1:<iter>:<salt>:<hash>; NULL = set on first login
 );
 
--- One Dibs per raider per season; consumed only by winning with it.
+-- Season-scoped state: remaining Dibs charges (seeded from seasons.dibs_per_season on join).
 CREATE TABLE season_raiders (
-  season_id INTEGER NOT NULL REFERENCES seasons(id),
-  raider_id INTEGER NOT NULL REFERENCES raiders(id),
-  has_dibs  INTEGER NOT NULL DEFAULT 1,
+  season_id      INTEGER NOT NULL REFERENCES seasons(id),
+  raider_id      INTEGER NOT NULL REFERENCES raiders(id),
+  dibs_remaining INTEGER NOT NULL DEFAULT 1,
   PRIMARY KEY (season_id, raider_id)
 );
 
--- Per-session state. Winning with Need spends need_available and sets dibs_locked;
--- winning with Dibs spends the season Dibs and need_available.
+-- Session-scoped state: item level and remaining Need charges (seeded from
+-- seasons.need_per_session on join). A Need or Dibs win spends one Need charge.
 CREATE TABLE session_raiders (
   session_id     INTEGER NOT NULL REFERENCES sessions(id),
   raider_id      INTEGER NOT NULL REFERENCES raiders(id),
   item_level     INTEGER NOT NULL DEFAULT 0,
-  need_available INTEGER NOT NULL DEFAULT 1,
-  dibs_locked    INTEGER NOT NULL DEFAULT 0,
+  need_remaining INTEGER NOT NULL DEFAULT 1,
   joined_at      INTEGER NOT NULL,
   PRIMARY KEY (session_id, raider_id)
 );
@@ -62,18 +68,20 @@ CREATE TABLE items (
   icon             TEXT,                        -- bundled asset path, null for custom items
   sort_order       INTEGER NOT NULL,
   winner_raider_id INTEGER REFERENCES raiders(id),
-  win_tier         TEXT,                        -- greed | equip | need | dibs
-  resolved_at      INTEGER                      -- set once rolled, even if nobody won
+  win_tier         TEXT,                        -- greed | offspec | equip | need | dibs
+  resolved_at      INTEGER,                     -- set once rolled, even if nobody won
+  resolved_mode    TEXT                         -- batch | live | award
 );
 
 -- Every participant's roll on every item (losers included) so runner-ups can be ranked.
 CREATE TABLE rolls (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  item_id    INTEGER NOT NULL REFERENCES items(id),
-  raider_id  INTEGER NOT NULL REFERENCES raiders(id),
-  tier       TEXT    NOT NULL,                  -- greed | equip | need | dibs
-  roll_value INTEGER,                           -- null when they were the only roller
-  won        INTEGER NOT NULL DEFAULT 0
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id     INTEGER NOT NULL REFERENCES items(id),
+  raider_id   INTEGER NOT NULL REFERENCES raiders(id),
+  tier        TEXT    NOT NULL,                 -- what the roll counted as (after demotion)
+  picked_tier TEXT,                             -- the raider's pre-pick at resolution time (null = rolled live)
+  roll_value  INTEGER,                          -- null when they were the only roller
+  won         INTEGER NOT NULL DEFAULT 0
 );
 
 -- Raiders' pre-planned choices for items not yet rolled.
@@ -81,7 +89,7 @@ CREATE TABLE plans (
   session_id INTEGER NOT NULL REFERENCES sessions(id),
   item_id    INTEGER NOT NULL REFERENCES items(id),
   raider_id  INTEGER NOT NULL REFERENCES raiders(id),
-  tier       TEXT    NOT NULL,                  -- greed | equip | need | dibs
+  tier       TEXT    NOT NULL,                  -- pass | greed | offspec | equip | need | dibs
   PRIMARY KEY (item_id, raider_id)
 );
 

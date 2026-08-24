@@ -207,7 +207,7 @@ function JoinForm({ sessionId, seasonId, me, onJoined }: { sessionId: number; se
   return (
     <SectionCard title="Join this session">
       <Stack gap="xs">
-        <NumberInput label="Your item level. Yes, your real one." value={itemLevel} onChange={setItemLevel} min={0} allowDecimal={false} autoFocus />
+        <NumberInput label="Your highest item level (character panel mouse-over tooltip)." value={itemLevel} onChange={setItemLevel} min={0} allowDecimal={false} autoFocus />
         {seasonInfo === null && (
           <Text size="xs" c="dimmed">
             First raid night this season. You start with full Dibs charges.

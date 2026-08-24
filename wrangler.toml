@@ -30,6 +30,16 @@ name = "PRESENCE"
 class_name = "PresenceDO"
 
 # SQLite-backed Durable Objects (available on the free Workers plan).
+# v2/v3 were a one-time wipe: delete the classes (bindings temporarily removed for that
+# deploy, since a bound class cannot be deleted), then recreate them empty.
 [[migrations]]
 tag = "v1"
+new_sqlite_classes = ["SessionDO", "PresenceDO"]
+
+[[migrations]]
+tag = "v2"
+deleted_classes = ["SessionDO", "PresenceDO"]
+
+[[migrations]]
+tag = "v3"
 new_sqlite_classes = ["SessionDO", "PresenceDO"]
