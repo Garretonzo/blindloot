@@ -18,8 +18,8 @@ export const TIER_HINT: Record<Tier, string> = {
   greed: 'It looks cool. Unlimited rolls.',
   offspec: "You'd wear it for an off-spec. Unlimited rolls. Off-spec beats Transmog.",
   equip: "You'd actually wear it, main spec. If you lie and I catch you, you're out. Unlimited rolls. Equip beats Off-spec.",
-  need: 'You want it for real. One win per week (per difficulty). Need beats Equip.',
-  dibs: 'More than anything. One win per season. Dibs beats Need; ties go to item level.',
+  need: 'You want it for real. Limited wins per week (per difficulty). Set by the raid leader. Need beats Equip.',
+  dibs: 'More than anything. Limited wins per season. Set by the raid leader. Each Dibs win also spends a Need charge. Dibs beats Need. Multiple Dibs: higher item level wins outright; only an exact ilvl tie is rolled.',
 };
 
 /** Mantine color per tier, used everywhere a tier is displayed. */
@@ -40,6 +40,10 @@ export interface Season {
   /** Which bundled boss/loot pool this season uses (RaidData.id). */
   raid_id: string;
   created_at: number;
+  /** Dibs charges each raider gets for the whole season. */
+  dibs_per_season: number;
+  /** Need wins each raider is allowed per session (a Dibs win also spends one). */
+  need_per_session: number;
 }
 
 export interface Session {
@@ -54,16 +58,18 @@ export interface Raider {
   id: number;
   username: string;
   item_level: number;
-  /** Season-level Dibs still unspent. */
-  has_dibs: boolean;
-  /** Session-level Need still available (also cleared by winning with Dibs). */
-  need_available: boolean;
-  /** Dibs locked for this session because the raider won with Need. */
-  dibs_locked: boolean;
+  /** Season-level Dibs charges still unspent. */
+  dibs_remaining: number;
+  /** Session-level Need charges still unspent (a Dibs win also spends one). */
+  need_remaining: number;
+  /** The season's configured Dibs allowance (for "x of y" displays). */
+  dibs_limit: number;
+  /** The season's configured Need-wins-per-session allowance. */
+  need_limit: number;
 }
 
-/** Can this raider use Dibs on an item in this session right now? */
-export const canDibs = (r: Pick<Raider, 'has_dibs' | 'dibs_locked'>) => r.has_dibs && !r.dibs_locked;
+/** Can this raider use Dibs on an item in this session right now? A Dibs win also costs a Need charge, so one must be available. */
+export const canDibs = (r: Pick<Raider, 'dibs_remaining' | 'need_remaining'>) => r.dibs_remaining > 0 && r.need_remaining > 0;
 
 /** Drop a tier to what the raider can still afford: Dibs → Need if no Dibs, Need → Equip if no Need. */
 export function demoteTier(tier: Tier, e: { needAvailable: boolean; canDibs: boolean }): Tier {
@@ -80,8 +86,11 @@ export interface Item {
   icon: string | null;
   sort_order: number;
   winner_raider_id: number | null;
+  /** Hidden (null) from raiders, except on items the viewer won themselves. */
   win_tier: Tier | null;
   resolved_at: number | null;
+  /** Raider view only: the viewer's recorded pre-pick on an item they won (null = rolled live / no pre-pick). */
+  my_picked_tier?: Tier | null;
 }
 
 export interface Boss {
@@ -192,7 +201,7 @@ export interface LiveState {
   /** Number of raiders who have chosen on the current item. */
   choiceCount: number;
   lastResult: ItemResult | null;
-  /** Randomize item order for the next live roll-off or batch. */
+  /** Smart item order (priority + random ties) for roll-offs and batches; false = plain list order. */
   shuffle: boolean;
   /** Results of the last instant batch (replaced by the next one; cleared when a live roll-off starts). */
   batchResults: ItemResult[] | null;

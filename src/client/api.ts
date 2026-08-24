@@ -11,8 +11,9 @@ async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   if (!res.ok) {
     const message = (data as { error?: string }).error ?? `HTTP ${res.status}`;
     // A raider action rejected as "not logged in" means our stored login is stale (expired,
-    // ended by an admin, or the server's presence state was reset). Drop it.
-    if (res.status === 401 && !url.startsWith('/api/admin') && !url.startsWith('/api/site')) {
+    // ended by an admin, or the server's presence state was reset). Drop it. A 401 from
+    // /api/login itself is a failed login attempt (wrong/missing password), not a lost login.
+    if (res.status === 401 && url !== '/api/login' && !url.startsWith('/api/admin') && !url.startsWith('/api/site')) {
       window.dispatchEvent(new CustomEvent(LOGIN_LOST_EVENT, { detail: message }));
     }
     throw new Error(message);
@@ -34,15 +35,19 @@ export const api = {
   plans: (id: number, raiderId: number) => req<Record<number, Tier>>('GET', `/api/sessions/${id}/plans?raiderId=${raiderId}`),
   setPlan: (id: number, me: Identity, itemId: number, tier: Tier | null) =>
     req('PUT', `/api/sessions/${id}/plans`, { raiderId: me.raiderId, token: me.token, itemId, tier }),
-  roster: () => req<{ id: number; username: string }[]>('GET', '/api/raiders'),
+  roster: () => req<{ id: number; username: string; has_password: number }[]>('GET', '/api/raiders'),
   presence: () => req<{ online: number[] }>('GET', '/api/presence'),
-  /** Log in as a roster raider. Passing the current token makes it an idempotent refresh of an existing login. */
-  login: (raiderId: number, token?: string) => req<Identity>('POST', '/api/login', { raiderId, token }),
+  /**
+   * Log in as a roster raider. Passing the current token makes it an idempotent refresh of an
+   * existing login (no password needed while it's active). Otherwise the raider's password is
+   * required — and sets it on their very first login.
+   */
+  login: (raiderId: number, token?: string, password?: string) => req<Identity>('POST', '/api/login', { raiderId, token, password }),
   /** Is this stored login still valid on the server? */
   checkLogin: (id: Identity) => req<{ ok: boolean }>('GET', `/api/login/check?raiderId=${id.raiderId}&token=${encodeURIComponent(id.token)}`),
   logout: (id: Identity) => req('POST', '/api/logout', { raiderId: id.raiderId, token: id.token }),
   mySeasons: (raiderId: number) =>
-    req<{ seasonId: number; hasDibs: boolean; lastItemLevel: number }[]>('GET', `/api/raiders/${raiderId}/seasons`),
+    req<{ seasonId: number; dibsRemaining: number; lastItemLevel: number }[]>('GET', `/api/raiders/${raiderId}/seasons`),
   join: (id: number, me: Identity, itemLevel: number) =>
     req<{ raiderId: number; username: string }>('POST', `/api/sessions/${id}/join`, { raiderId: me.raiderId, token: me.token, itemLevel }),
 
@@ -50,8 +55,11 @@ export const api = {
     me: () => req<{ admin: boolean; super: boolean }>('GET', '/api/admin/me'),
     login: (password: string) => req<{ ok: true; role: 'admin' | 'super' }>('POST', '/api/admin/login', { password }),
     logout: () => req<{ ok: true }>('POST', '/api/admin/logout'),
-    createSeason: (name: string, raidId: string) => req<Season>('POST', '/api/admin/seasons', { name, raidId }),
+    createSeason: (name: string, raidId: string, dibsPerSeason?: number, needPerSession?: number) =>
+      req<Season>('POST', '/api/admin/seasons', { name, raidId, dibsPerSeason, needPerSession }),
     renameSeason: (seasonId: number, name: string) => req('PATCH', `/api/admin/seasons/${seasonId}`, { name }),
+    updateSeasonLimits: (seasonId: number, limits: { dibsPerSeason?: number; needPerSession?: number }) =>
+      req('PATCH', `/api/admin/seasons/${seasonId}`, limits),
     renameSession: (sessionId: number, name: string) => req('PATCH', `/api/admin/sessions/${sessionId}`, { name }),
     deleteSeason: (seasonId: number) => req('DELETE', `/api/admin/seasons/${seasonId}`),
     createSession: (seasonId: number, name: string) =>
@@ -75,13 +83,14 @@ export const api = {
     updateRaider: (
       sessionId: number,
       raiderId: number,
-      body: { username?: string; itemLevel?: number; hasDibs?: boolean; needAvailable?: boolean },
+      body: { username?: string; itemLevel?: number; dibsRemaining?: number; needRemaining?: number },
     ) => req('PATCH', `/api/admin/sessions/${sessionId}/raiders/${raiderId}`, body),
     raiders: () => req<RosterRaider[]>('GET', '/api/admin/raiders'),
     createRaider: (username: string) => req<{ id: number; username: string; created: boolean }>('POST', '/api/admin/raiders', { username }),
     renameRaider: (id: number, username: string) => req('PATCH', `/api/admin/raiders/${id}`, { username }),
     deleteRaider: (id: number) => req('DELETE', `/api/admin/raiders/${id}`),
     endLogin: (raiderId: number) => req('DELETE', `/api/admin/logins/${raiderId}`),
+    resetPassword: (raiderId: number) => req('DELETE', `/api/admin/raiders/${raiderId}/password`),
     addRaider: (sessionId: number, raiderId: number, itemLevel: number) =>
       req<Identity>('POST', `/api/admin/sessions/${sessionId}/raiders`, { raiderId, itemLevel }),
     removeRaider: (sessionId: number, raiderId: number) =>
@@ -102,6 +111,8 @@ export interface RosterRaider {
   id: number;
   username: string;
   created_at: number;
+  /** 0 = passwordless: their next login prompts them to set one. */
+  has_password: number;
 }
 
 export interface HistoryData {
@@ -115,7 +126,7 @@ export interface HistoryData {
     winner: string | null;
   }[];
   rolls: { item_id: number; username: string; tier: string; roll_value: number | null; won: number }[];
-  raiders: { id: number; username: string; item_level: number; has_dibs: number }[];
+  raiders: { id: number; username: string; item_level: number; dibs_remaining: number }[];
 }
 
 export interface Identity {

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { Env } from '../env';
-import { getSessionDetail, getSessionRaiders, joinSession, LAST_ILVL_SQL } from '../db';
-import { hasSiteAccess, isAdmin, requireSite, setSiteCookie, siteGateEnabled } from '../auth';
+import { getSessionDetail, getSessionRaiders, getWinnerPickedTiers, joinSession, LAST_ILVL_SQL } from '../db';
+import { hashPassword, hasSiteAccess, isAdmin, requireSite, setSiteCookie, siteGateEnabled, verifyPassword } from '../auth';
 import { checkLogin, notifySession, presenceStub, sessionStub } from '../session';
 import { canDibs, Tier, TIER_RANK } from '../../shared/types';
 
@@ -31,12 +31,20 @@ publicRoutes.get('/sessions/:id', async (c) => {
   if (!detail) return c.json({ error: 'not found' }, 404);
   if (await isAdmin(c)) return c.json(detail);
 
-  // Raiders see who won (not how) and everyone's item level, but only their own Need / Dibs state.
+  // Raiders see who won (not how) and everyone's item level, but only their own Need / Dibs
+  // state — and on items they won themselves, the winning tier plus their own pre-pick.
   const meId = Number(c.req.query('raiderId')) || null;
+  const myPicked = meId ? await getWinnerPickedTiers(c.env.DB, detail.session.id, meId) : {};
   return c.json({
     ...detail,
-    bosses: detail.bosses.map((b) => ({ ...b, items: b.items.map((i) => ({ ...i, win_tier: null })) })),
-    raiders: detail.raiders.map((r) => (r.id === meId ? r : { ...r, has_dibs: false, need_available: false, dibs_locked: false })),
+    bosses: detail.bosses.map((b) => ({
+      ...b,
+      items: b.items.map((i) => {
+        const mine = meId != null && i.winner_raider_id === meId;
+        return { ...i, win_tier: mine ? i.win_tier : null, my_picked_tier: mine ? myPicked[i.id] ?? null : null };
+      }),
+    })),
+    raiders: detail.raiders.map((r) => (r.id === meId ? r : { ...r, dibs_remaining: 0, need_remaining: 0 })),
   });
 });
 
@@ -73,9 +81,9 @@ publicRoutes.put('/sessions/:id/plans', async (c) => {
 
   const me = (await getSessionRaiders(db, sessionId)).find((r) => r.id === raiderId);
   if (!me) return c.json({ error: 'not in this session' }, 403);
-  if (tier === 'need' && !me.need_available) return c.json({ error: 'Need roll already used' }, 409);
+  if (tier === 'need' && me.need_remaining <= 0) return c.json({ error: 'No Need charges left this session' }, 409);
   if (tier === 'dibs' && !canDibs(me))
-    return c.json({ error: me.dibs_locked ? 'Dibs is locked this session (you won with Need)' : 'Your Dibs is already used this season' }, 409);
+    return c.json({ error: me.dibs_remaining <= 0 ? 'No Dibs charges left this season' : 'Dibs requires an available Need charge' }, 409);
 
   if (tier) {
     await db
@@ -95,7 +103,9 @@ publicRoutes.put('/sessions/:id/plans', async (c) => {
 
 // ---- login: pick a roster name; presence tracks who is logged in ----
 publicRoutes.get('/raiders', async (c) => {
-  const rows = await c.env.DB.prepare('SELECT id, username FROM raiders ORDER BY username COLLATE NOCASE').all();
+  const rows = await c.env.DB.prepare(
+    'SELECT id, username, (password_hash IS NOT NULL) AS has_password FROM raiders ORDER BY username COLLATE NOCASE',
+  ).all();
   return c.json(rows.results);
 });
 
@@ -105,9 +115,39 @@ publicRoutes.get('/presence', async (c) => {
 });
 
 publicRoutes.post('/login', async (c) => {
-  const { raiderId, token } = await c.req.json<{ raiderId?: number; token?: string }>();
-  const raider = await c.env.DB.prepare('SELECT id, username FROM raiders WHERE id = ?').bind(Number(raiderId)).first<{ id: number; username: string }>();
+  const { raiderId, token, password } = await c.req.json<{ raiderId?: number; token?: string; password?: string }>();
+  const db = c.env.DB;
+  const raider = await db
+    .prepare('SELECT id, username, password_hash FROM raiders WHERE id = ?')
+    .bind(Number(raiderId))
+    .first<{ id: number; username: string; password_hash: string | null }>();
   if (!raider) return c.json({ error: 'raider not found' }, 404);
+
+  // Password checks happen HERE, in front of the presence DO: the DO happily mints a fresh
+  // token once a login goes inactive, so the route is the gate. A presented token that still
+  // matches an active login skips the password (the client's silent re-login / "heal" path).
+  const healing = !!token && (await checkLogin(c.env, raider.id, token));
+  if (!healing) {
+    let hash = raider.password_hash;
+    if (hash == null) {
+      // First login: the raider sets their password now.
+      if (!password || password.length < 4) return c.json({ error: 'Choose a password (at least 4 characters)' }, 400);
+      const set = await db
+        .prepare('UPDATE raiders SET password_hash = ? WHERE id = ? AND password_hash IS NULL')
+        .bind(await hashPassword(password), raider.id)
+        .run();
+      if (!set.meta.changes) {
+        // Someone else set it between our SELECT and UPDATE: verify against the winner's hash.
+        hash = (await db.prepare('SELECT password_hash FROM raiders WHERE id = ?').bind(raider.id).first<{ password_hash: string | null }>())
+          ?.password_hash ?? null;
+      }
+    }
+    if (hash != null) {
+      if (!password) return c.json({ error: 'Password required' }, 401);
+      if (!(await verifyPassword(password, hash))) return c.json({ error: 'Wrong password' }, 401);
+    }
+  }
+
   const res = await presenceStub(c.env).fetch('https://do/login', {
     method: 'POST',
     body: JSON.stringify({ raiderId: raider.id, username: raider.username, token: token || undefined }),
@@ -139,16 +179,16 @@ publicRoutes.get('/presence/ws', async (c) => {
   return presenceStub(c.env).fetch(new Request(target, { headers }));
 });
 
-/** A raider's per-season record: Dibs status and their most recent item level in that season. */
+/** A raider's per-season record: remaining Dibs charges and their most recent item level in that season. */
 publicRoutes.get('/raiders/:id/seasons', async (c) => {
   const raiderId = Number(c.req.param('id'));
   const rows = await c.env.DB.prepare(
-    `SELECT sr.season_id, sr.has_dibs, ${LAST_ILVL_SQL.replace('ssr.raider_id = ?', 'ssr.raider_id = sr.raider_id').replace('s.season_id = ?', 's.season_id = sr.season_id')} AS last_item_level
+    `SELECT sr.season_id, sr.dibs_remaining, ${LAST_ILVL_SQL.replace('ssr.raider_id = ?', 'ssr.raider_id = sr.raider_id').replace('s.season_id = ?', 's.season_id = sr.season_id')} AS last_item_level
      FROM season_raiders sr WHERE sr.raider_id = ?`,
   )
     .bind(raiderId)
-    .all<{ season_id: number; has_dibs: number; last_item_level: number }>();
-  return c.json(rows.results.map((r) => ({ seasonId: r.season_id, hasDibs: !!r.has_dibs, lastItemLevel: r.last_item_level })));
+    .all<{ season_id: number; dibs_remaining: number; last_item_level: number }>();
+  return c.json(rows.results.map((r) => ({ seasonId: r.season_id, dibsRemaining: r.dibs_remaining, lastItemLevel: r.last_item_level })));
 });
 
 publicRoutes.post('/sessions/:id/join', async (c) => {

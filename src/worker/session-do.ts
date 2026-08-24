@@ -1,8 +1,18 @@
 import { DurableObject } from 'cloudflare:workers';
 import { Env } from './env';
-import { canDibs, ClientMessage, ItemResult, LiveState, ServerMessage, Tier } from '../shared/types';
-import { resolveItem, Participant } from '../shared/resolve';
-import { getItemWithBoss, getPendingItemIds, getPlansForItem, getSessionRaiders, persistResult, ResolveMode, setSessionStatus } from './db';
+import { canDibs, ClientMessage, demoteTier, ItemResult, LiveState, ServerMessage, Tier } from '../shared/types';
+import { orderItemsByPriority, resolveItem, Participant } from '../shared/resolve';
+import {
+  getItemWithBoss,
+  getPendingItemIds,
+  getPendingPlans,
+  getPlansForItem,
+  getSessionRaiders,
+  getWinCounts,
+  persistResult,
+  ResolveMode,
+  setSessionStatus,
+} from './db';
 
 const DEFAULT_ITEM_SECONDS = 10;
 const DEFAULT_RESULT_SECONDS = 3;
@@ -226,17 +236,34 @@ export class SessionDO extends DurableObject<Env> {
     if (raiders.length > 0 && raiders.every((r) => ready.has(r.id))) await this.start();
   }
 
-  /** Unrolled items in roll order — list order, or a random permutation when shuffle is on. */
+  /**
+   * Unrolled items in roll order. Shuffle off: plain list order. Shuffle on: priority order —
+   * items with the highest effective pre-pick tier first, fewest top-tier planners first within
+   * a group (so near-uncontested Dibs/Need picks resolve before their planners' charges are
+   * spent elsewhere), random tie-break. Recomputed after every resolution, since wins demote
+   * later pre-picks.
+   */
   private async orderedPending(): Promise<number[]> {
     const ids = await getPendingItemIds(this.env.DB, this.sessionId);
     if (!this.state.shuffle) return ids;
+    // Fisher–Yates first: orderItemsByPriority is a stable sort, so this is the tie-break entropy.
     const rnd = new Uint32Array(ids.length);
     crypto.getRandomValues(rnd);
     for (let i = ids.length - 1; i > 0; i--) {
       const j = rnd[i] % (i + 1);
       [ids[i], ids[j]] = [ids[j], ids[i]];
     }
-    return ids;
+    const [plans, raiders] = await Promise.all([getPendingPlans(this.env.DB, this.sessionId), getSessionRaiders(this.env.DB, this.sessionId)]);
+    const effective = new Map<number, Tier[]>();
+    for (const p of plans) {
+      const r = raiders.find((x) => x.id === p.raider_id);
+      if (!r) continue; // no longer in the session
+      const tier = demoteTier(p.tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
+      let list = effective.get(p.item_id);
+      if (!list) effective.set(p.item_id, (list = []));
+      list.push(tier);
+    }
+    return orderItemsByPriority(ids, effective);
   }
 
   private async start() {
@@ -265,11 +292,14 @@ export class SessionDO extends DurableObject<Env> {
    */
   private async runBatch() {
     if (this.state.phase !== 'open') throw new Error('Finish or reset the live roll-off first');
-    const itemIds = await this.orderedPending();
-    if (itemIds.length === 0) throw new Error('No unrolled items');
+    if ((await getPendingItemIds(this.env.DB, this.sessionId)).length === 0) throw new Error('No unrolled items');
     const results: ItemResult[] = [];
-    for (const itemId of itemIds) {
-      const choices = await this.prefilledChoices(itemId); // re-read each time: earlier wins change eligibility
+    // Pick the next item fresh each round: earlier wins demote pre-picks, which reshuffles the
+    // priority order. Terminates because every resolution sets resolved_at.
+    for (;;) {
+      const itemId = (await this.orderedPending())[0];
+      if (itemId == null) break;
+      const choices = await this.prefilledChoices(itemId);
       results.push(await this.resolveOne(itemId, choices, 'batch'));
     }
     await this.save({ batchResults: results, lastResult: null, lockedIn: [], revision: this.state.revision + 1 });
@@ -292,10 +322,7 @@ export class SessionDO extends DurableObject<Env> {
     for (const [idStr, tier] of Object.entries(plans)) {
       const r = raiders.find((x) => x.id === Number(idStr));
       if (!r) continue;
-      let t = tier;
-      if (t === 'dibs' && !canDibs(r)) t = 'need';
-      if (t === 'need' && !r.need_available) t = 'equip';
-      out[r.id] = t;
+      out[r.id] = demoteTier(tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
     }
     return out;
   }
@@ -305,8 +332,10 @@ export class SessionDO extends DurableObject<Env> {
       const raiders = await getSessionRaiders(this.env.DB, this.sessionId);
       const me = raiders.find((r) => r.id === raiderId);
       if (!me) throw new Error('You are not in this session');
-      if (tier === 'need' && !me.need_available) throw new Error('Need roll already used');
-      if (tier === 'dibs' && !canDibs(me)) throw new Error(me.dibs_locked ? 'Dibs is locked this session (you won with Need)' : 'Your Dibs is already used this season');
+      if (tier === 'need' && me.need_remaining <= 0) throw new Error('No Need charges left this session');
+      if (tier === 'dibs' && !canDibs(me)) {
+        throw new Error(me.dibs_remaining <= 0 ? 'No Dibs charges left this season' : 'Dibs requires an available Need charge');
+      }
     }
     const choices = { ...this.state.choices };
     if (tier) choices[raiderId] = tier;
@@ -316,8 +345,15 @@ export class SessionDO extends DurableObject<Env> {
 
   private async resolveCurrent() {
     const lastResult = await this.resolveOne(this.state.itemIds[this.state.currentIndex], this.state.choices, 'live');
+    // Re-derive the remaining order: this win may have demoted the winner's later pre-picks.
+    // Keep the resolved prefix, and keep the roll-off scoped to its starting snapshot (loot
+    // added mid-roll-off stays out; an item awarded manually mid-roll-off drops out).
+    const snapshot = new Set(this.state.itemIds);
+    const prefix = this.state.itemIds.slice(0, this.state.currentIndex + 1);
+    const remainder = (await this.orderedPending()).filter((id) => snapshot.has(id));
     await this.save({
       phase: 'results',
+      itemIds: [...prefix, ...remainder],
       lastResult,
       choices: {},
       choiceCount: 0,
@@ -338,13 +374,14 @@ export class SessionDO extends DurableObject<Env> {
       const r = raiders.find((x) => x.id === Number(idStr));
       if (!r) continue;
       // Re-validate eligibility at resolution time.
-      let t = tier;
-      if (t === 'dibs' && !canDibs(r)) t = 'need';
-      if (t === 'need' && !r.need_available) t = 'equip';
+      const t = demoteTier(tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
       participants.push({ id: r.id, username: r.username, itemLevel: r.item_level, tier: t });
     }
 
-    const res = resolveItem(participants);
+    // Win-equalization: within the top contested tier, only rollers tied for the fewest wins
+    // at that tier can take the item. Fetched fresh so earlier items' wins count immediately.
+    const winCounts = await getWinCounts(this.env.DB, this.sessionId);
+    const res = resolveItem(participants, undefined, winCounts);
     await persistResult(this.env.DB, this.sessionId, {
       itemId,
       winnerId: res.winnerId,
@@ -360,7 +397,8 @@ export class SessionDO extends DurableObject<Env> {
       winnerId: res.winnerId,
       winnerName: res.winnerId != null ? raiders.find((r) => r.id === res.winnerId)?.username ?? null : null,
       winTier: res.winTier,
-      entries: res.entries,
+      // pickedTier lets winners be shown their own pre-pick → what it counted as.
+      entries: res.entries.map((e) => ({ ...e, pickedTier: picked[e.raiderId] ?? null })),
     };
   }
 
@@ -447,18 +485,24 @@ export class SessionDO extends DurableObject<Env> {
 
   /**
    * What a given connection is allowed to see. Admins get everything; raiders only
-   * their own live choice and results without tiers ("who won", not "how").
+   * their own live choice and results without tiers ("who won", not "how") — except
+   * items they won themselves, where they see the winning tier and their own pre-pick.
    */
   private viewFor(att: Attachment): LiveState {
     if (att.admin) return this.state;
     const s = this.state;
     const own: Record<number, Tier> = {};
     if (att.raiderId != null && s.choices[att.raiderId]) own[att.raiderId] = s.choices[att.raiderId];
-    const blind = (r: ItemResult): ItemResult => ({
-      ...r,
-      winTier: null,
-      entries: r.entries.map(({ tier: _tier, itemLevel: _ilvl, ...rest }) => ({ ...rest, itemLevel: 0 })),
-    });
+    const blind = (r: ItemResult): ItemResult => {
+      const mine = att.raiderId != null && r.winnerId === att.raiderId;
+      return {
+        ...r,
+        winTier: mine ? r.winTier : null,
+        entries: r.entries.map(({ tier, pickedTier, itemLevel: _ilvl, ...rest }) =>
+          mine && rest.raiderId === att.raiderId ? { ...rest, tier, pickedTier, itemLevel: 0 } : { ...rest, itemLevel: 0 },
+        ),
+      };
+    };
     return {
       ...s,
       choices: own,

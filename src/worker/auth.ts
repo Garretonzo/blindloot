@@ -18,6 +18,32 @@ async function hmac(secret: string, message: string): Promise<string> {
   return btoa(String.fromCharCode(...new Uint8Array(sig)));
 }
 
+// ---- raider passwords: PBKDF2 hashes stored per raider in D1 (NULL = not set yet) ----
+const PBKDF2_ITERATIONS = 100_000;
+
+async function pbkdf2(password: string, salt: Uint8Array, iterations: number): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256);
+  return btoa(String.fromCharCode(...new Uint8Array(bits)));
+}
+
+/** Hash a raider's password with a fresh random salt. Format: pbkdf2v1:<iterations>:<saltB64>:<hashB64> */
+export async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return `pbkdf2v1:${PBKDF2_ITERATIONS}:${btoa(String.fromCharCode(...salt))}:${await pbkdf2(password, salt, PBKDF2_ITERATIONS)}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [scheme, iter, saltB64, hashB64] = stored.split(':');
+  if (scheme !== 'pbkdf2v1' || !iter || !saltB64 || !hashB64) return false;
+  try {
+    const salt = Uint8Array.from(atob(saltB64), (ch) => ch.charCodeAt(0));
+    return (await pbkdf2(password, salt, Number(iter))) === hashB64;
+  } catch {
+    return false;
+  }
+}
+
 async function roleToken(env: Env, role: Role): Promise<string> {
   return `${role}:${await hmac(env.ADMIN_PASSWORD, `role-v1:${role}`)}`;
 }

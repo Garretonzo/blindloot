@@ -1,4 +1,4 @@
-import { Anchor, Badge, Button, Group, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Anchor, Badge, Button, Group, NumberInput, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { RAIDS, raidById, raidLabel } from '../../shared/raids';
 import { SectionCard, SubHeader } from '../components/SectionCard';
 import { StatusBadge } from '../components/StatusBadge';
@@ -53,6 +53,9 @@ function RosterCard({ isSuper }: { isSuper: boolean }) {
   const remove = (r: RosterRaider) =>
     confirm(`Delete ${r.username} from the roster?`) && api.admin.deleteRaider(r.id).then(load).catch(fail);
   const endLogin = (r: RosterRaider) => api.admin.endLogin(r.id).catch(fail);
+  const resetPassword = (r: RosterRaider) =>
+    confirm(`Reset ${r.username}'s password? They'll choose a new one on their next login.`) &&
+    api.admin.resetPassword(r.id).then(load).catch(fail);
 
   return (
     <SectionCard
@@ -85,7 +88,16 @@ function RosterCard({ isSuper }: { isSuper: boolean }) {
         <Table verticalSpacing={4} withRowBorders={false}>
           <Table.Tbody>
             {roster.map((r) => (
-              <RosterRow key={r.id} r={r} isSuper={isSuper} online={online.has(r.id)} onRename={rename} onRemove={remove} onEndLogin={endLogin} />
+              <RosterRow
+                key={r.id}
+                r={r}
+                isSuper={isSuper}
+                online={online.has(r.id)}
+                onRename={rename}
+                onRemove={remove}
+                onEndLogin={endLogin}
+                onResetPassword={resetPassword}
+              />
             ))}
           </Table.Tbody>
         </Table>
@@ -104,6 +116,7 @@ function RosterRow({
   onRename,
   onRemove,
   onEndLogin,
+  onResetPassword,
 }: {
   r: RosterRaider;
   isSuper: boolean;
@@ -111,6 +124,7 @@ function RosterRow({
   onRename: (id: number, username: string) => void;
   onRemove: (r: RosterRaider) => void;
   onEndLogin: (r: RosterRaider) => void;
+  onResetPassword: (r: RosterRaider) => void;
 }) {
   const [name, setName] = useState(r.username);
   useEffect(() => setName(r.username), [r.username]);
@@ -125,22 +139,34 @@ function RosterRow({
           onBlur={() => name.trim() && name.trim() !== r.username && onRename(r.id, name.trim())}
         />
       </Table.Td>
-      <Table.Td w={110}>
-        {online ? (
-          <Badge size="xs" variant="dot" color="green">
-            logged in
-          </Badge>
-        ) : (
-          <Text size="xs" c="dimmed">
-            offline
-          </Text>
-        )}
+      <Table.Td w={200}>
+        <Group gap={6} wrap="nowrap">
+          {online ? (
+            <Badge size="xs" variant="dot" color="green">
+              logged in
+            </Badge>
+          ) : (
+            <Text size="xs" c="dimmed">
+              offline
+            </Text>
+          )}
+          {!r.has_password && (
+            <Badge size="xs" variant="light" color="yellow" title="They'll choose a password on their next login.">
+              no password
+            </Badge>
+          )}
+        </Group>
       </Table.Td>
-      <Table.Td w={150} ta="right">
+      <Table.Td w={230} ta="right">
         <Group gap="sm" justify="flex-end">
           {online && (
             <Anchor component="button" size="xs" onClick={() => onEndLogin(r)}>
               End login
+            </Anchor>
+          )}
+          {!!r.has_password && (
+            <Anchor component="button" size="xs" onClick={() => onResetPassword(r)} title="Back to passwordless; they set a new one on next login.">
+              Reset password
             </Anchor>
           )}
           {isSuper && (
@@ -200,12 +226,61 @@ function EditableName({ value, onSave, children }: { value: string; onSave: (nam
   );
 }
 
+/** Per-season charge limits. Saving applies retroactively: remaining = new limit − wins already recorded. */
+function SeasonLimits({ season, onSaved }: { season: Season; onSaved: () => void }) {
+  const [dibs, setDibs] = useState<number | string>(season.dibs_per_season);
+  const [need, setNeed] = useState<number | string>(season.need_per_session);
+  useEffect(() => setDibs(season.dibs_per_season), [season.dibs_per_season]);
+  useEffect(() => setNeed(season.need_per_session), [season.need_per_session]);
+
+  const save = async (limits: { dibsPerSeason?: number; needPerSession?: number }) => {
+    try {
+      await api.admin.updateSeasonLimits(season.id, limits);
+      onSaved();
+    } catch (e) {
+      notifications.show({ color: 'red', message: (e as Error).message });
+    }
+  };
+
+  return (
+    <Group gap="md" mb="sm" align="flex-end">
+      <NumberInput
+        label="Dibs / season"
+        size="xs"
+        w={110}
+        min={0}
+        max={99}
+        allowDecimal={false}
+        value={dibs}
+        onChange={setDibs}
+        onBlur={() => typeof dibs === 'number' && dibs !== season.dibs_per_season && save({ dibsPerSeason: dibs })}
+      />
+      <NumberInput
+        label="Need wins / session"
+        size="xs"
+        w={140}
+        min={0}
+        max={99}
+        allowDecimal={false}
+        value={need}
+        onChange={setNeed}
+        onBlur={() => typeof need === 'number' && need !== season.need_per_session && save({ needPerSession: need })}
+      />
+      <Text size="xs" c="dimmed" pb={6}>
+        Changes apply to everyone immediately (remaining = limit − wins).
+      </Text>
+    </Group>
+  );
+}
+
 export function AdminHome() {
   const { ok, isSuper } = useRequireAdmin();
   const nav = useNavigate();
   const [data, setData] = useState<{ seasons: Season[]; sessions: Session[] } | null>(null);
   const [seasonName, setSeasonName] = useState('');
   const [raidId, setRaidId] = useState<string | null>(RAIDS.length === 1 ? RAIDS[0].id : null);
+  const [newDibs, setNewDibs] = useState<number | string>(1);
+  const [newNeed, setNewNeed] = useState<number | string>(1);
   const [sessionNames, setSessionNames] = useState<Record<number, string>>({});
 
   const refresh = useCallback(() => {
@@ -219,7 +294,9 @@ export function AdminHome() {
 
   const createSeason = async () => {
     if (!seasonName.trim() || !raidId) return;
-    await api.admin.createSeason(seasonName, raidId).catch((e: Error) => notifications.show({ color: 'red', message: e.message }));
+    await api.admin
+      .createSeason(seasonName, raidId, typeof newDibs === 'number' ? newDibs : 1, typeof newNeed === 'number' ? newNeed : 1)
+      .catch((e: Error) => notifications.show({ color: 'red', message: e.message }));
     setSeasonName('');
     refresh();
   };
@@ -290,6 +367,8 @@ export function AdminHome() {
             onChange={setRaidId}
             allowDeselect={false}
           />
+          <NumberInput label="Dibs / season" w={110} min={0} max={99} allowDecimal={false} value={newDibs} onChange={setNewDibs} />
+          <NumberInput label="Need wins / session" w={140} min={0} max={99} allowDecimal={false} value={newNeed} onChange={setNewNeed} />
           <Button onClick={createSeason} disabled={!seasonName.trim() || !raidId}>
             Create
           </Button>
@@ -324,6 +403,7 @@ export function AdminHome() {
             </Group>
           }
         >
+          <SeasonLimits season={season} onSaved={refresh} />
           <SubHeader>Sessions</SubHeader>
           <Stack gap={4} mb="sm" pl="sm">
             {data.sessions

@@ -72,11 +72,13 @@ export function HelpPage() {
 
       <SectionCard title="The one rule to remember">
         <Alert variant="light" color="orange">
-          <b>One Need</b> per week (per difficulty). Win with <b>Dibs</b> and it eats your Need. Win with <b>Need</b> and your Dibs is benched for
-          the week. Need and Dibs are only spent when you <b>win</b>. Losing costs nothing, so... just fucking roll.
+          You get a limited number of <b>Need wins</b> per week (per difficulty) and <b>Dibs</b> per season. Usually one each, the raid
+          leader sets it, and the session page shows the numbers. 
+          A Dibs win also spends a Need charge, and Dibs is locked whenever you're out of Need charges. 
+          Need and Dibs are only spent when you <b>win</b>. Losing costs nothing, so... just fucking roll.
         </Alert>
         <Text size="sm" c="dimmed" mt="sm">
-          Dibs comes back each season. Need comes back each week (per difficulty).
+          Dibs charges come back each season. Need charges come back each week (per difficulty).
         </Text>
       </SectionCard>
 
@@ -105,8 +107,8 @@ export function HelpPage() {
           <List.Item>
             Happy with your picks? Flip the <b>YES</b> switch under the Loot card so the officer knows. It resets whenever loot is added.
             When loot's done, the loot officer <b>runs the batch</b>: the site resolves every item from everyone's picks in one go and posts the results. <b>Items are resolved in a
-            random order</b>, so "first on the list" means nothing: if you pre-pick Need on three items, any of them could be the one that
-            spends it. The risk is yours. 
+            pseudo-random order</b>, so "first on the list" means nothing: if you pre-pick Need on three items, any of them could be the one that
+            spends it. The risk is yours.
           </List.Item>
           {/* <List.Item>
             Sometimes the officer runs a <b>live roll-off</b> instead: ready check, then items one at a time with a countdown. Your pre-picks
@@ -135,8 +137,9 @@ export function HelpPage() {
           <Accordion.Item value="planned">
             <Accordion.Control>I pre-picked Need on two items. What if I win one?</Accordion.Control>
             <Accordion.Panel>
-              The other drops a step automatically (Need → Equip, Dibs → Need). You can't roll with something you no longer have. And since
-              the order is random, you don't get to choose which one goes first. If one matters more, maybe pick Need on that one only. The risk is yours.
+              Once you're out of Need charges, the others drop a step automatically (Dibs → Need, Need → Equip, etc.) You can't roll with
+              something you no longer have. And since the item roll-off order is pseudo-random, you don't get to choose which one goes first. If one matters
+              more, maybe pick Need on that one only. The risk is yours.
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="alone">
@@ -146,7 +149,17 @@ export function HelpPage() {
           <Accordion.Item value="order">
             <Accordion.Control>What order are items rolled in?</Accordion.Control>
             <Accordion.Panel>
-              Random, by default. The loot officer can switch it to list order, but assume random.
+              Pseudo-random; it's not the list order and you can't predict it.
+            </Accordion.Panel>
+          </Accordion.Item>
+          <Accordion.Item value="pseudo">
+            <Accordion.Control>"Pseudo-random"? What does that mean?</Accordion.Control>
+            <Accordion.Panel>
+              The order is random, with a thumb on the scale so charges are spent where they're desired most. Items where someone picked a high
+              tier (Dibs, then Need, and so on) are resolved first, and within those, the item with the <i>fewest</i> people rolling at that
+              tier goes first. So if you happen to be the only one who Dibs'd something, it resolves before your Dibs would get spent on a different, contested
+              item. The order re-sorts after every item as wins spend charges. None of this tells you anything about anyone's picks, and
+              you never see the order anyway. Pick what each item is worth to you and let the site do the scheduling. 
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="tab">

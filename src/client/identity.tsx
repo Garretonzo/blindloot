@@ -1,4 +1,4 @@
-import { Anchor, Button, Select, Stack, Text } from '@mantine/core';
+import { Anchor, Button, PasswordInput, Select, Stack, Text } from '@mantine/core';
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { Link } from 'react-router-dom';
@@ -95,9 +95,11 @@ export const useIdentity = () => useContext(IdentityContext);
 /** First-visit screen: pick your name from the roster. Names already logged in are greyed out. */
 export function NamePrompt() {
   const { setIdentity } = useIdentity();
-  const [roster, setRoster] = useState<{ id: number; username: string }[]>([]);
+  const [roster, setRoster] = useState<{ id: number; username: string; has_password: number }[]>([]);
   const [online, setOnline] = useState<Set<number>>(new Set());
   const [picked, setPicked] = useState<string | null>(null);
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,14 +114,30 @@ export function NamePrompt() {
     return () => window.clearInterval(t);
   }, []);
 
+  const sel = roster.find((r) => String(r.id) === picked);
+  const needsSetup = !!sel && !sel.has_password;
+
+  const pick = (v: string | null) => {
+    setPicked(v);
+    setPassword('');
+    setConfirm('');
+    setError(null);
+  };
+
   const submit = async () => {
-    if (!picked) return;
+    if (!picked || !password) return;
+    if (needsSetup) {
+      if (password.length < 4) return setError('At least 4 characters.');
+      if (password !== confirm) return setError("Passwords don't match.");
+    }
     setBusy(true);
     setError(null);
     try {
-      setIdentity(await api.login(Number(picked)));
+      setIdentity(await api.login(Number(picked), undefined, password));
     } catch (e) {
       setError((e as Error).message);
+      setPassword('');
+      setConfirm('');
       api.presence().then((p) => setOnline(new Set(p.online))).catch(() => {});
     } finally {
       setBusy(false);
@@ -138,15 +156,39 @@ export function NamePrompt() {
               disabled: online.has(r.id),
             }))}
             value={picked}
-            onChange={setPicked}
+            onChange={pick}
             searchable
-            error={error}
+            error={!picked ? error : undefined}
             nothingFoundMessage="Not on the roster. Ask an admin to add you"
           />
+          {picked && (
+            <PasswordInput
+              label={needsSetup ? 'Choose a password' : 'Password'}
+              value={password}
+              onChange={(e) => setPassword(e.currentTarget.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !needsSetup && submit()}
+              error={picked ? error : undefined}
+              autoFocus
+            />
+          )}
+          {picked && needsSetup && (
+            <>
+              <PasswordInput
+                label="Confirm password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.currentTarget.value)}
+                onKeyDown={(e) => e.key === 'Enter' && submit()}
+              />
+              <Text size="xs" c="dimmed">
+                First login — choose a password (min 4 characters). You'll use it every time you log in. Forgot it later? The loot
+                officer can reset it.
+              </Text>
+            </>
+          )}
           <Text size="xs" c="dimmed">
             Greyed-out names are already logged in somewhere. Close that tab (frees up in ~30 s) or nag the loot officer.
           </Text>
-          <Button onClick={submit} loading={busy} disabled={!picked}>
+          <Button onClick={submit} loading={busy} disabled={!picked || !password || (needsSetup && !confirm)}>
             That's me
           </Button>
           <Text size="xs" c="dimmed" ta="center">

@@ -2,7 +2,16 @@ import { Hono } from 'hono';
 import { Env } from '../env';
 import { clearAdminCookie, getRole, requireAdmin, requireSuper, roleForPassword, setAdminCookie } from '../auth';
 import { clearSession, notifySession, presenceStub, sessionStub } from '../session';
-import { getSessionRolls, joinSession, LAST_ILVL_SQL, raiderEligibility, recomputeRaiderResources, setItemLevelStatements, upsertRaider } from '../db';
+import {
+  getSessionRolls,
+  joinSession,
+  LAST_ILVL_SQL,
+  raiderEligibility,
+  recomputeRaiderResources,
+  recomputeSeasonResources,
+  setItemLevelStatements,
+  upsertRaider,
+} from '../db';
 import { demoteTier, SummaryItem, Tier } from '../../shared/types';
 import { raidById } from '../../shared/raids';
 
@@ -60,20 +69,48 @@ adminRoutes.delete('/seasons/:id', requireSuper, async (c) => {
 });
 
 // ---- seasons ----
+/** Charge limits are small non-negative counts; anything else falls back to null (= not provided). */
+const parseLimit = (v: unknown): number | null => {
+  if (v == null) return null;
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) ? Math.min(99, Math.max(0, n)) : null;
+};
+
 adminRoutes.post('/seasons', async (c) => {
-  const { name, raidId } = await c.req.json<{ name?: string; raidId?: string }>();
+  const { name, raidId, dibsPerSeason, needPerSession } = await c.req.json<{
+    name?: string;
+    raidId?: string;
+    dibsPerSeason?: number;
+    needPerSession?: number;
+  }>();
   if (!name?.trim()) return c.json({ error: 'name required' }, 400);
   if (!raidId || !raidById(raidId)) return c.json({ error: 'unknown boss/loot pool' }, 400);
-  const r = await c.env.DB.prepare('INSERT INTO seasons (name, raid_id, created_at) VALUES (?, ?, ?) RETURNING *')
-    .bind(name.trim(), raidId, Date.now())
+  const r = await c.env.DB.prepare(
+    'INSERT INTO seasons (name, raid_id, created_at, dibs_per_season, need_per_session) VALUES (?, ?, ?, ?, ?) RETURNING *',
+  )
+    .bind(name.trim(), raidId, Date.now(), parseLimit(dibsPerSeason) ?? 1, parseLimit(needPerSession) ?? 1)
     .first();
   return c.json(r);
 });
 
 adminRoutes.patch('/seasons/:id', async (c) => {
-  const { name } = await c.req.json<{ name?: string }>();
-  if (!name?.trim()) return c.json({ error: 'name required' }, 400);
-  await c.env.DB.prepare('UPDATE seasons SET name = ? WHERE id = ?').bind(name.trim(), Number(c.req.param('id'))).run();
+  const seasonId = Number(c.req.param('id'));
+  const body = await c.req.json<{ name?: string; dibsPerSeason?: number; needPerSession?: number }>();
+  const dibs = parseLimit(body.dibsPerSeason);
+  const need = parseLimit(body.needPerSession);
+  if (!body.name?.trim() && dibs == null && need == null) return c.json({ error: 'nothing to update' }, 400);
+  const db = c.env.DB;
+  const stmts: D1PreparedStatement[] = [];
+  if (body.name?.trim()) stmts.push(db.prepare('UPDATE seasons SET name = ? WHERE id = ?').bind(body.name.trim(), seasonId));
+  if (dibs != null) stmts.push(db.prepare('UPDATE seasons SET dibs_per_season = ? WHERE id = ?').bind(dibs, seasonId));
+  if (need != null) stmts.push(db.prepare('UPDATE seasons SET need_per_session = ? WHERE id = ?').bind(need, seasonId));
+  // A limit change applies retroactively: remaining = new limit - wins already recorded.
+  if (dibs != null || need != null) stmts.push(...recomputeSeasonResources(db, seasonId));
+  await db.batch(stmts);
+  if (dibs != null || need != null) {
+    const sessions = await db.prepare('SELECT id FROM sessions WHERE season_id = ?').bind(seasonId).all<{ id: number }>();
+    for (const s of sessions.results) await notifySession(c.env, s.id);
+  }
   return c.json({ ok: true });
 });
 
@@ -111,7 +148,7 @@ adminRoutes.get('/seasons/:id/history', async (c) => {
     .all();
   const raiders = await db
     .prepare(
-      `SELECT r.id, r.username, sr.has_dibs,
+      `SELECT r.id, r.username, sr.dibs_remaining,
               ${LAST_ILVL_SQL.replace('ssr.raider_id = ?', 'ssr.raider_id = sr.raider_id').replace('s.season_id = ?', 's.season_id = sr.season_id')} AS item_level
        FROM season_raiders sr JOIN raiders r ON r.id = sr.raider_id
        WHERE sr.season_id = ? ORDER BY r.username`,
@@ -345,8 +382,16 @@ adminRoutes.delete('/sessions/:id/bosses/:bossId', async (c) => {
 
 // ---- site-wide raider roster ----
 adminRoutes.get('/raiders', async (c) => {
-  const rows = await c.env.DB.prepare('SELECT id, username, created_at FROM raiders ORDER BY username COLLATE NOCASE').all();
+  const rows = await c.env.DB.prepare(
+    'SELECT id, username, created_at, (password_hash IS NOT NULL) AS has_password FROM raiders ORDER BY username COLLATE NOCASE',
+  ).all();
   return c.json(rows.results);
+});
+
+/** Reset a raider to passwordless (lockout recovery); their next login prompts them to set a new one. */
+adminRoutes.delete('/raiders/:id/password', async (c) => {
+  await c.env.DB.prepare('UPDATE raiders SET password_hash = NULL WHERE id = ?').bind(Number(c.req.param('id'))).run();
+  return c.json({ ok: true });
 });
 
 adminRoutes.post('/raiders', async (c) => {
@@ -417,8 +462,8 @@ adminRoutes.patch('/sessions/:id/raiders/:raiderId', async (c) => {
   const body = await c.req.json<{
     username?: string;
     itemLevel?: number;
-    hasDibs?: boolean;
-    needAvailable?: boolean;
+    dibsRemaining?: number;
+    needRemaining?: number;
   }>();
   const db = c.env.DB;
   const session = await db.prepare('SELECT season_id FROM sessions WHERE id = ?')
@@ -431,18 +476,20 @@ adminRoutes.patch('/sessions/:id/raiders/:raiderId', async (c) => {
     stmts.push(db.prepare('UPDATE raiders SET username = ? WHERE id = ?').bind(body.username.trim(), raiderId));
   }
   if (body.itemLevel != null) stmts.push(...setItemLevelStatements(db, sessionId, raiderId, Math.max(0, Math.floor(body.itemLevel))));
-  if (body.hasDibs != null) {
+  const dibsRemaining = parseLimit(body.dibsRemaining);
+  if (dibsRemaining != null) {
     stmts.push(
       db
-        .prepare('UPDATE season_raiders SET has_dibs = ? WHERE season_id = ? AND raider_id = ?')
-        .bind(body.hasDibs ? 1 : 0, session.season_id, raiderId),
+        .prepare('UPDATE season_raiders SET dibs_remaining = ? WHERE season_id = ? AND raider_id = ?')
+        .bind(dibsRemaining, session.season_id, raiderId),
     );
   }
-  if (body.needAvailable != null) {
+  const needRemaining = parseLimit(body.needRemaining);
+  if (needRemaining != null) {
     stmts.push(
       db
-        .prepare('UPDATE session_raiders SET need_available = ? WHERE session_id = ? AND raider_id = ?')
-        .bind(body.needAvailable ? 1 : 0, sessionId, raiderId),
+        .prepare('UPDATE session_raiders SET need_remaining = ? WHERE session_id = ? AND raider_id = ?')
+        .bind(needRemaining, sessionId, raiderId),
     );
   }
   try {

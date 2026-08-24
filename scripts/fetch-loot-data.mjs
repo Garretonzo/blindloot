@@ -28,13 +28,13 @@ const RAID = {
       slug: 'nekzali',
       name: "Nek'zali the Soulcoiler",
       wikiIcon: 'IconSmall_ForestTroll2_Female.gif',
-      items: [268236, 268218, 268235, 268240, 268231, 268216, 268229, 268245, 268248, 268208, 268203, 270930, 270162],
+      items: [268236, 268218, 268235, 268240, 268230, 268216, 268229, 268245, 268248, 268208, 268203, 270930, 270162],
     },
     {
       slug: 'entombed-sentinels',
       name: 'Entombed Sentinels',
       wikiIcon: 'IconSmall_SnakeGolemGreen.gif',
-      items: [268228, 268219, 268224, 268230, 268204, 268198, 268197, 268250, 270165, 270910, 270911, 270912, 270913],
+      items: [268228, 268219, 268224, 268204, 268198, 268197, 268250, 270165, 270910, 270911, 270912, 270913],
     },
     {
       slug: 'vashnik',
@@ -64,7 +64,7 @@ const RAID = {
       slug: 'coiled-altar',
       name: 'The Coiled Altar',
       wikiIcon: ['IconSmall_CoiledAltar.gif', 'IconSmall_HexLord.gif', 'IconSmall_ForestTroll_Male.gif'],
-      items: [268243, 268255, 268256, 268225, 268237, 268222, 268259, 268253, 268211, 268209, 268213, 270169, 270173],
+      items: [268243, 268255, 268256, 268225, 268231, 268237, 268222, 268259, 268253, 268211, 268209, 268213, 270169, 270173],
     },
     {
       slug: 'ulatek',
@@ -76,7 +76,7 @@ const RAID = {
       slug: 'nymrissa',
       name: 'Nymrissa Wavecaller',
       wikiIcon: 'IconSmall_Naga3.gif',
-      items: [268221, 268232, 268225, 268247, 268217, 268238, 268226, 268244, 268199, 268262, 268263, 268266, 270167, 279112],
+      items: [268221, 268232, 268247, 268217, 268238, 268226, 268244, 268199, 268262, 268263, 268266, 270167],
     },
   ],
 };

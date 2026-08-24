@@ -14,12 +14,21 @@ Tiers, lowest to highest: **Transmog** → **Off-spec** → **Equip** → **Need
 **Pass** is an explicit "not rolling" — recorded so the officer can see it, never wins.
 
 - Transmog, Off-spec and Equip are unlimited.
-- Need: one per raider per session; consumed only when you *win* with it.
-- Dibs: one per raider per **season**; consumed only when you win with it.
-  Two Dibs → higher item level wins; tie → 1-100 roll.
-- Winning with Need locks your Dibs for the rest of that session; winning with Dibs uses up your
-  Need for that session. One "big" win per session.
-- Same tier → 1-100 roll, highest wins.
+- Need: a configurable number of wins per raider per session (default 1, set on the season);
+  a charge is consumed only when you *win* with it.
+- Dibs: a configurable number of charges per raider per **season** (default 1). A Dibs roll also
+  requires an available Need charge; winning with Dibs spends one Dibs charge *and* one Need
+  charge. Two Dibs → higher item level wins; tie → 1-100 roll.
+- Out of Need charges → Need (and therefore Dibs) is locked until next session. With the default
+  limits that means one "big" win per session, exactly like the old fixed rule.
+- Same tier → 1-100 roll, highest wins. From every tier, when several rollers are tied at the top
+  tier, only those tied for the **fewest wins at that tier** (Dibs counted season-wide, the rest
+  per session) are eligible — loot spreads out instead of clumping on one lucky roller.
+- Items are rolled in a priority order: items whose top pre-pick tier is highest go first, and
+  within a group the item with the fewest top-tier planners goes first (so a solo Dibs is
+  guaranteed before that raider's Dibs gets spent elsewhere); ties are random, and the order is
+  recomputed after every item. Raiders never see the order — the loot list stays in the order the
+  admin added it; the admin summary records the actual roll order.
 
 ## Local development
 
@@ -39,9 +48,11 @@ npm run dev                         # http://localhost:8787
   A session's status is `open`, `staging`, `rolling` or `closed`; an item records its winner, the
   tier it was won with and when it was resolved.
 - **raiders** is the site-wide roster (username is the identity, case-insensitive).
-- **season_raiders** holds the one thing that spans a season: whether the raider still has Dibs.
-- **session_raiders** holds per-session state: item level, Need still available, and the Dibs
-  lock (set by a Need win).
+- **season_raiders** holds the one thing that spans a season: the raider's remaining Dibs charges.
+- **session_raiders** holds per-session state: item level and remaining Need charges. The
+  per-raider allowances (`dibs_per_season`, `need_per_session`) live on **seasons** and are
+  admin-editable; remaining charges are re-derived (limit − wins) on wins, re-awards and limit
+  changes.
 - **rolls** stores every participant's roll on every item (losers too) so runner-ups can be ranked
   and items re-awarded. **plans** stores raiders' pre-planned choices for unrolled items.
 
@@ -87,12 +98,16 @@ Add → Custom domain**. Cloudflare creates the DNS record and certificate. Opti
 1. Admin (`/admin`) creates a Season — a name plus the **boss/loot pool** it uses (currently only
    *Midnight Season 2 — The Venomous Abyss*) — then a Session inside it. Both can be renamed; the
    pool is fixed.
-2. Raiders **log in by picking their name** from the roster the admin prepared. A name that is
-   already logged in elsewhere is greyed out. Logins are tracked live (a `PresenceDO` Durable
-   Object): closing the tab frees the name after ~30 s, "(log out)" in the header frees it at once,
-   and an admin can **End login** from the roster, which bounces that raider back to the picker.
-   Opening a session asks only for their current item level. Everyone starts a season with their
-   Dibs; Dibs/Need state is stored per season and per session on the server.
+2. Raiders **log in by picking their name** from the roster the admin prepared. Raiders are
+   created without a password: the **first login prompts them to set one** (password + confirm,
+   min 4 chars; PBKDF2-hashed in D1), and every later login requires it. An admin can **Reset
+   password** from the roster (back to passwordless, for lockouts) — it doesn't end an active
+   login. A name that is already logged in elsewhere is greyed out. Logins are tracked live (a
+   `PresenceDO` Durable Object): closing the tab frees the name after ~30 s, "(log out)" in the
+   header frees it at once, and an admin can **End login** from the roster, which bounces that
+   raider back to the picker.
+   Opening a session asks only for their current item level. Everyone starts a season with full
+   Dibs charges; Dibs/Need charges are stored per season and per session on the server.
 3. After each boss, admin picks the boss from the dropdown and the dropped items from its loot
    pool (Midnight Season 2 — The Venomous Abyss, incl. Nymrissa Wavecaller; custom names still
    allowed). Boss and item icons are bundled with the app.
@@ -102,7 +117,7 @@ Add → Custom domain**. Cloudflare creates the DNS record and certificate. Opti
    and types the same name (case doesn't matter) they get that record, history and Dibs included.
 5. Raiders pre-pick their roll on each item as loot is added — this is the primary way of rolling.
    When loot is done the admin clicks **Run instant batch** and every item is resolved from the
-   pre-picks at once (optionally in random order). Results are shown to everyone.
+   pre-picks at once, in the priority order described above. Results are shown to everyone.
 6. Alternative, live mode: admin clicks **Stage rolling** → ready check → the first item is shown
    **paused**; **Start countdown** gives 15 s to pick a tier (pre-picks pre-fill), then 5 s of
    results, then the next item (durations adjustable in the Controls card).
@@ -114,14 +129,15 @@ Add → Custom domain**. Cloudflare creates the DNS record and certificate. Opti
    (e.g. the next raid night) and stage another roll-off — only unrolled items are included.
 8. **Close session** when the raid is fully done (no more joins/edits); **Reopen** if needed.
 9. **Randomize item order** (on by default) in the Controls card applies to both batch and live
-   modes. Batch results show raiders who won; the admin also sees tiers and every roll.
+   modes: on = the priority order with random tie-breaks, off = plain list order. Batch results
+   show raiders who won; the admin also sees tiers and every roll.
 
 Also:
 - `/help` ("How it works", linked from the header and the name picker) explains the roll types,
   the Need/Dibs rule, the raid-night flow and a short FAQ for raiders.
 - Raiders can **pre-plan** a roll on any upcoming item from the loot list; it pre-fills their
   choice when the item comes up (they can still change it during the countdown). A planned Need
-  or Dibs is demoted one tier automatically if they've already won with it.
+  or Dibs is demoted one tier automatically once they're out of the charges it needs.
 - Raiders see each other's item level and **who** won an item, never the tier it was won with or
   anyone else's Need / Dibs state; the admin sees everything.
 - The admin session page has a collapsed **Summary** card: every resolved item in the order it

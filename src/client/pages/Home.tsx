@@ -13,7 +13,7 @@ import { Season, Session } from '../../shared/types';
 export function Home() {
   const { identity } = useIdentity();
   const [data, setData] = useState<{ seasons: Season[]; sessions: Session[] } | null>(null);
-  const [mine, setMine] = useState<Record<number, { hasDibs: boolean }>>({});
+  const [mine, setMine] = useState<Record<number, { dibsRemaining: number }>>({});
 
   useEffect(() => {
     api.seasons().then(setData).catch(() => setData({ seasons: [], sessions: [] }));
@@ -27,10 +27,11 @@ export function Home() {
 
   const dibsBadge = (seasonId: number) => {
     if (!identity) return null;
-    const used = mine[seasonId] && !mine[seasonId].hasDibs;
+    const remaining = mine[seasonId]?.dibsRemaining;
+    const used = remaining === 0;
     return (
       <Badge size="xs" variant="light" color={used ? 'gray' : 'grape'}>
-        {used ? 'Dibs used' : 'Dibs available'}
+        {used ? 'Dibs used' : remaining != null && remaining > 1 ? `Dibs available (${remaining})` : 'Dibs available'}
       </Badge>
     );
   };

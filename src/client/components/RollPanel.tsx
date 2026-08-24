@@ -160,7 +160,7 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
           {me ? (
             <SimpleGrid cols={{ base: 3, xs: 6 }}>
               {TIERS.map((t) => {
-                const disabled = (t === 'need' && !me.need_available) || (t === 'dibs' && !canDibs(me));
+                const disabled = (t === 'need' && me.need_remaining <= 0) || (t === 'dibs' && !canDibs(me));
                 const selected = mine === t;
                 return (
                   <Button
@@ -189,15 +189,11 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
               {mine ? `Locked in: ${TIER_LABEL[mine]}` : "You haven't rolled. Tick tock."}
             </Text>
           )}
-          {me && (!me.need_available || !canDibs(me)) && (
+          {me && (me.need_remaining <= 0 || !canDibs(me)) && (
             <Text size="xs" ta="center" c="dimmed">
-              {me.dibs_locked
-                ? 'You already won with Need this week (this difficulty). Need and Dibs are locked until next week or difficulty.'
-                : !me.need_available && !me.has_dibs
-                  ? 'You already won with Dib this week (this difficulty). Need is locked until next week or difficulty.'
-                  : !me.need_available
-                    ? 'Need already used this session.'
-                    : 'Dibs already used this season.'}
+              {me.need_remaining <= 0
+                ? `No Need charges left this session (${me.need_limit} per session)${me.dibs_remaining > 0 ? ' — Dibs requires one too, so it is locked' : ''}. Back next week or difficulty.`
+                : `No Dibs charges left this season (${me.dibs_limit} per season). Need: ${me.need_remaining} of ${me.need_limit} left.`}
             </Text>
           )}
         </Stack>
@@ -207,19 +203,30 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
 
   // results
   const res = live.lastResult;
+  // The server only sends winTier/pickedTier to non-admins on items they won themselves.
+  const myWin = res != null && me != null && res.winnerId === me.id;
+  const myPick = myWin ? res.entries.find((e) => e.raiderId === me.id)?.pickedTier : undefined;
   return (
     <SectionCard title="Result" right={pausedBadge}>
       <Stack gap="sm">
         {header}
         {adminControls && <AdminBar live={live} controls={adminControls} />}
         {res && res.winnerId != null ? (
-          <Group justify="center" gap="sm" className="pop" key={res.itemId}>
-            <IconTrophy size={26} color="var(--mantine-color-yellow-4)" />
-            <Text fw={800} fz={24} className="brand">
-              {res.winnerName}
-            </Text>
-            {res.winTier && <TierBadge tier={res.winTier} size="md" />}
-          </Group>
+          <Stack gap={4} className="pop" key={res.itemId}>
+            <Group justify="center" gap="sm">
+              <IconTrophy size={26} color="var(--mantine-color-yellow-4)" />
+              <Text fw={800} fz={24} className="brand">
+                {res.winnerName}
+              </Text>
+              {res.winTier && <TierBadge tier={res.winTier} size="md" />}
+            </Group>
+            {myWin && myPick != null && (
+              <Text size="xs" ta="center" c="dimmed">
+                You pre-picked {TIER_LABEL[myPick]}
+                {res.winTier && res.winTier !== myPick ? ` — it counted as ${TIER_LABEL[res.winTier]}` : ''}.
+              </Text>
+            )}
+          </Stack>
         ) : (
           <Group justify="center" gap="xs" className="pop" key={res?.itemId ?? 'none'}>
             <IconDice5 size={22} color="var(--mantine-color-dark-2)" />

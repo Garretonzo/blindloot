@@ -1,4 +1,5 @@
 import { Boss, Item, Raider, RollEntry, Season, Session, SessionDetail, Tier } from '../shared/types';
+import { WinCounts } from '../shared/resolve';
 
 export async function getSessionDetail(db: D1Database, sessionId: number): Promise<SessionDetail | null> {
   const session = await db.prepare('SELECT * FROM sessions WHERE id = ?').bind(sessionId).first<Session>();
@@ -33,18 +34,21 @@ interface RaiderRow {
   id: number;
   username: string;
   item_level: number;
-  has_dibs: number;
-  need_available: number;
-  dibs_locked: number;
+  dibs_remaining: number;
+  need_remaining: number;
+  dibs_per_season: number;
+  need_per_session: number;
 }
 
 export async function getSessionRaiders(db: D1Database, sessionId: number): Promise<Raider[]> {
   const rows = await db
     .prepare(
-      `SELECT r.id, r.username, ssr.item_level, sr.has_dibs, ssr.need_available, ssr.dibs_locked
+      `SELECT r.id, r.username, ssr.item_level, sr.dibs_remaining, ssr.need_remaining,
+              se.dibs_per_season, se.need_per_session
        FROM session_raiders ssr
        JOIN raiders r ON r.id = ssr.raider_id
        JOIN sessions s ON s.id = ssr.session_id
+       JOIN seasons se ON se.id = s.season_id
        JOIN season_raiders sr ON sr.season_id = s.season_id AND sr.raider_id = r.id
        WHERE ssr.session_id = ?
        ORDER BY ssr.joined_at, r.id`,
@@ -55,9 +59,10 @@ export async function getSessionRaiders(db: D1Database, sessionId: number): Prom
     id: r.id,
     username: r.username,
     item_level: r.item_level,
-    has_dibs: !!r.has_dibs,
-    need_available: !!r.need_available,
-    dibs_locked: !!r.dibs_locked,
+    dibs_remaining: r.dibs_remaining,
+    need_remaining: r.need_remaining,
+    dibs_limit: r.dibs_per_season,
+    need_limit: r.need_per_session,
   }));
 }
 
@@ -108,10 +113,67 @@ export async function persistResult(db: D1Database, sessionId: number, r: Persis
         .bind(r.itemId, e.raiderId, e.tier, e.pickedTier, e.roll, e.won ? 1 : 0),
     );
   }
-  if (r.winnerId != null) stmts.push(...resourceStatements(db, sessionId, r.winnerId, r.winTier, true));
+  // Charge the win: counters are re-derived from recorded wins (the items UPDATE above runs
+  // first in this batch), so wins, refunds, and limit changes all share one derivation path.
+  if (r.winnerId != null && (r.winTier === 'need' || r.winTier === 'dibs')) {
+    stmts.push(...recomputeRaiderResources(db, sessionId, r.winnerId));
+  }
   // Plans for this item are no longer needed.
   stmts.push(db.prepare('DELETE FROM plans WHERE item_id = ?').bind(r.itemId));
   await db.batch(stmts);
+}
+
+/** All pre-picks for a session's unresolved items, one row per (item, raider). */
+export async function getPendingPlans(db: D1Database, sessionId: number): Promise<{ item_id: number; raider_id: number; tier: Tier }[]> {
+  const rows = await db
+    .prepare(
+      `SELECT p.item_id, p.raider_id, p.tier FROM plans p
+       JOIN items i ON i.id = p.item_id
+       WHERE p.session_id = ? AND i.resolved_at IS NULL`,
+    )
+    .bind(sessionId)
+    .all<{ item_id: number; raider_id: number; tier: Tier }>();
+  return rows.results;
+}
+
+/**
+ * Per-raider win counts for the equalization filter. Scope matches each charge's scope:
+ * Dibs wins are counted season-wide, every other tier this session only.
+ */
+export async function getWinCounts(db: D1Database, sessionId: number): Promise<WinCounts> {
+  const rows = await db
+    .prepare(
+      `SELECT i.winner_raider_id AS raider_id, i.win_tier AS tier, COUNT(*) AS n
+       FROM items i JOIN bosses b ON b.id = i.boss_id
+       WHERE b.session_id = ?1 AND i.winner_raider_id IS NOT NULL AND i.win_tier != 'dibs'
+       GROUP BY i.winner_raider_id, i.win_tier
+       UNION ALL
+       SELECT i.winner_raider_id, i.win_tier, COUNT(*)
+       FROM items i JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
+       WHERE s.season_id = (SELECT season_id FROM sessions WHERE id = ?1)
+         AND i.winner_raider_id IS NOT NULL AND i.win_tier = 'dibs'
+       GROUP BY i.winner_raider_id, i.win_tier`,
+    )
+    .bind(sessionId)
+    .all<{ raider_id: number; tier: Tier; n: number }>();
+  const out: WinCounts = {};
+  for (const r of rows.results) (out[r.raider_id] ??= {})[r.tier] = r.n;
+  return out;
+}
+
+/** itemId -> a raider's recorded pre-pick on the items in this session that they WON (for showing winners their own pick). */
+export async function getWinnerPickedTiers(db: D1Database, sessionId: number, raiderId: number): Promise<Record<number, Tier | null>> {
+  const rows = await db
+    .prepare(
+      `SELECT ro.item_id, ro.picked_tier FROM rolls ro
+       JOIN items i ON i.id = ro.item_id JOIN bosses b ON b.id = i.boss_id
+       WHERE b.session_id = ?1 AND ro.raider_id = ?2 AND i.winner_raider_id = ?2`,
+    )
+    .bind(sessionId, raiderId)
+    .all<{ item_id: number; picked_tier: Tier | null }>();
+  const out: Record<number, Tier | null> = {};
+  for (const r of rows.results) out[r.item_id] = r.picked_tier;
+  return out;
 }
 
 /** raiderId -> planned tier for one item. */
@@ -150,71 +212,81 @@ export async function getSessionRolls(db: D1Database, sessionId: number): Promis
 }
 
 /**
- * Statements that take away (or give back) what a win costs:
- * - Need win: need spent for the session AND Dibs locked for the session.
- * - Dibs win: Dibs spent for the season AND need spent for the session.
- */
-export function resourceStatements(db: D1Database, sessionId: number, raiderId: number, tier: Tier | null, consume: boolean): D1PreparedStatement[] {
-  const avail = consume ? 0 : 1;
-  const locked = consume ? 1 : 0;
-  if (tier === 'need') {
-    return [
-      db
-        .prepare('UPDATE session_raiders SET need_available = ?, dibs_locked = ? WHERE session_id = ? AND raider_id = ?')
-        .bind(avail, locked, sessionId, raiderId),
-    ];
-  }
-  if (tier === 'dibs') {
-    return [
-      db
-        .prepare('UPDATE season_raiders SET has_dibs = ? WHERE raider_id = ? AND season_id = (SELECT season_id FROM sessions WHERE id = ?)')
-        .bind(avail, raiderId, sessionId),
-      db.prepare('UPDATE session_raiders SET need_available = ? WHERE session_id = ? AND raider_id = ?').bind(avail, sessionId, raiderId),
-    ];
-  }
-  return [];
-}
-
-/**
- * Derive a raider's Need / Dibs state from the items they have actually won, so admin
- * re-awards (change tier, give away, remove winner) always leave a consistent result.
+ * Derive a raider's remaining Need / Dibs charges from the items they have actually won
+ * (remaining = configured limit − wins, floored at 0), so wins, admin re-awards (change
+ * tier, give away, remove winner), and limit changes always leave a consistent result.
  */
 export function recomputeRaiderResources(db: D1Database, sessionId: number, raiderId: number): D1PreparedStatement[] {
-  const wonInSession = `SELECT 1 FROM items i JOIN bosses b ON b.id = i.boss_id
-                        WHERE b.session_id = ? AND i.winner_raider_id = ?`;
   return [
     db
       .prepare(
-        `UPDATE session_raiders SET
-           need_available = NOT EXISTS(${wonInSession} AND i.win_tier IN ('need','dibs')),
-           dibs_locked    =     EXISTS(${wonInSession} AND i.win_tier = 'need')
-         WHERE session_id = ? AND raider_id = ?`,
+        `UPDATE session_raiders SET need_remaining = MAX(0,
+           (SELECT se.need_per_session FROM seasons se JOIN sessions s ON s.season_id = se.id WHERE s.id = ?1)
+           - (SELECT COUNT(*) FROM items i JOIN bosses b ON b.id = i.boss_id
+              WHERE b.session_id = ?1 AND i.winner_raider_id = ?2 AND i.win_tier IN ('need','dibs')))
+         WHERE session_id = ?1 AND raider_id = ?2`,
       )
-      .bind(sessionId, raiderId, sessionId, raiderId, sessionId, raiderId),
+      .bind(sessionId, raiderId),
     db
       .prepare(
-        `UPDATE season_raiders SET has_dibs = NOT EXISTS(
-           SELECT 1 FROM items i JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
-           WHERE s.season_id = season_raiders.season_id AND i.winner_raider_id = ? AND i.win_tier = 'dibs')
-         WHERE raider_id = ? AND season_id = (SELECT season_id FROM sessions WHERE id = ?)`,
+        `UPDATE season_raiders SET dibs_remaining = MAX(0,
+           (SELECT dibs_per_season FROM seasons WHERE id = season_raiders.season_id)
+           - (SELECT COUNT(*) FROM items i JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
+              WHERE s.season_id = season_raiders.season_id AND i.winner_raider_id = ?1 AND i.win_tier = 'dibs'))
+         WHERE raider_id = ?1 AND season_id = (SELECT season_id FROM sessions WHERE id = ?2)`,
       )
-      .bind(raiderId, raiderId, sessionId),
+      .bind(raiderId, sessionId),
+  ];
+}
+
+/**
+ * Bulk recompute for every raider in a season (all their season and session counters).
+ * Run after an admin changes the season's limits so the change applies retroactively.
+ */
+export function recomputeSeasonResources(db: D1Database, seasonId: number): D1PreparedStatement[] {
+  return [
+    db
+      .prepare(
+        `UPDATE session_raiders SET need_remaining = MAX(0,
+           (SELECT need_per_session FROM seasons WHERE id = ?1)
+           - (SELECT COUNT(*) FROM items i JOIN bosses b ON b.id = i.boss_id
+              WHERE b.session_id = session_raiders.session_id
+                AND i.winner_raider_id = session_raiders.raider_id AND i.win_tier IN ('need','dibs')))
+         WHERE session_id IN (SELECT id FROM sessions WHERE season_id = ?1)`,
+      )
+      .bind(seasonId),
+    db
+      .prepare(
+        `UPDATE season_raiders SET dibs_remaining = MAX(0,
+           (SELECT dibs_per_season FROM seasons WHERE id = ?1)
+           - (SELECT COUNT(*) FROM items i JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
+              WHERE s.season_id = ?1 AND i.winner_raider_id = season_raiders.raider_id AND i.win_tier = 'dibs'))
+         WHERE season_id = ?1`,
+      )
+      .bind(seasonId),
   ];
 }
 
 /**
  * Put a raider into a session: create their season record if this is their first session of the
- * season (Dibs available), update their item level, and add them to the session.
+ * season (full Dibs charges), update their item level, and add them to the session with the
+ * season's configured Need allowance.
  */
 export async function joinSession(db: D1Database, sessionId: number, seasonId: number, raiderId: number, itemLevel: number) {
   await db.batch([
-    db.prepare('INSERT OR IGNORE INTO season_raiders (season_id, raider_id) VALUES (?, ?)').bind(seasonId, raiderId),
     db
       .prepare(
-        `INSERT INTO session_raiders (session_id, raider_id, item_level, joined_at) VALUES (?, ?, ?, ?)
+        `INSERT OR IGNORE INTO season_raiders (season_id, raider_id, dibs_remaining)
+         SELECT ?1, ?2, dibs_per_season FROM seasons WHERE id = ?1`,
+      )
+      .bind(seasonId, raiderId),
+    db
+      .prepare(
+        `INSERT INTO session_raiders (session_id, raider_id, item_level, need_remaining, joined_at)
+         SELECT ?1, ?2, ?3, need_per_session, ?4 FROM seasons WHERE id = ?5
          ON CONFLICT(session_id, raider_id) DO UPDATE SET item_level = excluded.item_level`,
       )
-      .bind(sessionId, raiderId, itemLevel, Date.now()),
+      .bind(sessionId, raiderId, itemLevel, Date.now(), seasonId),
   ]);
 }
 
@@ -246,17 +318,19 @@ export async function raiderEligibility(
   const row = await db
     .prepare(
       `SELECT
-         NOT EXISTS(SELECT 1 FROM items i JOIN bosses b ON b.id = i.boss_id
-                    WHERE b.session_id = ?1 AND i.winner_raider_id = ?2 AND i.id != ?3 AND i.win_tier IN ('need','dibs')) AS need_available,
-         NOT EXISTS(SELECT 1 FROM items i JOIN bosses b ON b.id = i.boss_id
-                    WHERE b.session_id = ?1 AND i.winner_raider_id = ?2 AND i.id != ?3 AND i.win_tier = 'need') AS not_locked,
-         NOT EXISTS(SELECT 1 FROM items i JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
-                    WHERE s.season_id = (SELECT season_id FROM sessions WHERE id = ?1)
-                      AND i.winner_raider_id = ?2 AND i.id != ?3 AND i.win_tier = 'dibs') AS has_dibs`,
+         MAX(0, (SELECT se.need_per_session FROM seasons se JOIN sessions s ON s.season_id = se.id WHERE s.id = ?1)
+           - (SELECT COUNT(*) FROM items i JOIN bosses b ON b.id = i.boss_id
+              WHERE b.session_id = ?1 AND i.winner_raider_id = ?2 AND i.id != ?3 AND i.win_tier IN ('need','dibs'))) AS need_remaining,
+         MAX(0, (SELECT se.dibs_per_season FROM seasons se JOIN sessions s ON s.season_id = se.id WHERE s.id = ?1)
+           - (SELECT COUNT(*) FROM items i JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
+              WHERE s.season_id = (SELECT season_id FROM sessions WHERE id = ?1)
+                AND i.winner_raider_id = ?2 AND i.id != ?3 AND i.win_tier = 'dibs')) AS dibs_remaining`,
     )
     .bind(sessionId, raiderId, excludeItemId)
-    .first<{ need_available: number; not_locked: number; has_dibs: number }>();
-  return { needAvailable: !!row?.need_available, canDibs: !!row?.has_dibs && !!row?.not_locked };
+    .first<{ need_remaining: number; dibs_remaining: number }>();
+  const needRemaining = row?.need_remaining ?? 0;
+  const dibsRemaining = row?.dibs_remaining ?? 0;
+  return { needAvailable: needRemaining > 0, canDibs: dibsRemaining > 0 && needRemaining > 0 };
 }
 
 export async function setSessionStatus(db: D1Database, sessionId: number, status: Session['status']) {

@@ -143,7 +143,7 @@ export function AdminSessionPage() {
                   if (
                     confirm(
                       `Resolve all ${pendingCount} unrolled item${pendingCount === 1 ? '' : 's'} right now from pre-picks? No countdowns.\n\n` +
-                        `${withPicks} of ${detail.raiders.length} raiders have pre-picks; ${live?.lockedIn.length ?? 0} say they're happy with them${live?.shuffle ? '. Order will be randomized.' : '.'}`,
+                        `${withPicks} of ${detail.raiders.length} raiders have pre-picks; ${live?.lockedIn.length ?? 0} say they're happy with them${live?.shuffle ? '. Priority order: Dibs/Need items first, least-contested first, random ties.' : '. List order.'}`,
                     )
                   )
                     send({ type: 'runBatch' });
@@ -191,7 +191,7 @@ export function AdminSessionPage() {
             />
             <Checkbox
               size="xs"
-              label="Randomize item order (live roll-off and instant batch)"
+              label="Smart item order (Dibs/Need items first, least-contested first, random ties; untick for list order)"
               checked={live?.shuffle ?? true}
               onChange={(e) => send({ type: 'setShuffle', value: e.currentTarget.checked })}
             />

@@ -35,9 +35,6 @@ interface Props {
 export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAward, me, plans, onPlan, onAddItem, onDeleteItem, onDeleteBoss }: Props) {
   const currentId = live && (live.phase === 'item' || live.phase === 'results') ? live.itemIds[live.currentIndex] : null;
   const name = (id: number | null) => raiders.find((r) => r.id === id)?.username ?? '?';
-  // During a shuffled live roll-off the roll order differs from the list order: show "#n".
-  const rollOrder = new Map<number, number>();
-  if (live && live.shuffle && currentId != null) live.itemIds.forEach((id, idx) => rollOrder.set(id, idx + 1));
 
   if (bosses.length === 0) return <EmptyState icon={<IconSkull size={28} />} text="No bosses down yet. Go kill something." />;
 
@@ -104,11 +101,6 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
                           now
                         </Badge>
                       )}
-                      {!isCurrent && !resolved && rollOrder.has(i.id) && (
-                        <Badge size="xs" variant="outline" color="gray" title="Roll order (randomized)">
-                          #{rollOrder.get(i.id)}
-                        </Badge>
-                      )}
                     </Group>
                     <Group gap="xs" wrap="nowrap">
                       {i.winner_raider_id != null && (
@@ -155,7 +147,7 @@ function PlanButtons({ me, plan, onPlan }: { me: Raider; plan: Tier | null; onPl
   return (
     <Group gap={2} justify="flex-end">
       {TIERS.map((t) => {
-        const disabled = (t === 'need' && !me.need_available) || (t === 'dibs' && !canDibs(me));
+        const disabled = (t === 'need' && me.need_remaining <= 0) || (t === 'dibs' && !canDibs(me));
         const selected = plan === t;
         return (
           <Button

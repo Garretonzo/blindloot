@@ -1,9 +1,10 @@
-import { ActionIcon, Badge, Group, NumberInput, Switch, Table, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Badge, Group, NumberInput, Table, Text, TextInput } from '@mantine/core';
 import React, { useEffect, useState } from 'react';
-import { Boss, Raider } from '../../shared/types';
+import { Boss, Raider, TIER_LABEL } from '../../shared/types';
 import { Icon } from './Icon';
 import { EmptyState } from './ItemList';
 import { ItemTooltip } from './ItemTooltip';
+import { TierBadge } from './TierBadge';
 import { IconUsers } from '@tabler/icons-react';
 
 interface Props {
@@ -17,7 +18,7 @@ interface Props {
   bosses?: Boss[];
   /** The season's boss/loot pool, for item tooltips. */
   raidId?: string;
-  onUpdate?: (raiderId: number, patch: { username?: string; itemLevel?: number; hasDibs?: boolean; needAvailable?: boolean }) => void;
+  onUpdate?: (raiderId: number, patch: { username?: string; itemLevel?: number; dibsRemaining?: number; needRemaining?: number }) => void;
   onRemove?: (raiderId: number) => void;
 }
 
@@ -98,11 +99,24 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
                 ) : (
                   <Group gap={6}>
                     {won.map((i) => (
-                      <ItemTooltip key={i.id} raidId={raidId} name={i.name}>
-                        <Badge size="sm" variant="light" color="gray" leftSection={<Icon src={i.icon} size={14} />}>
-                          {i.name}
-                        </Badge>
-                      </ItemTooltip>
+                      <Group key={i.id} gap={4} wrap="nowrap">
+                        <ItemTooltip raidId={raidId} name={i.name}>
+                          <Badge size="sm" variant="light" color="gray" leftSection={<Icon src={i.icon} size={14} />}>
+                            {i.name}
+                          </Badge>
+                        </ItemTooltip>
+                        {/* win_tier is only sent for the viewer's own wins: show how they won it, and their pre-pick. */}
+                        {i.win_tier && (
+                          <span title={i.my_picked_tier ? `You pre-picked ${TIER_LABEL[i.my_picked_tier]}; it counted as ${TIER_LABEL[i.win_tier]}.` : `Won via ${TIER_LABEL[i.win_tier]} (no pre-pick, rolled live).`}>
+                            <TierBadge tier={i.win_tier} />
+                          </span>
+                        )}
+                        {i.win_tier && i.my_picked_tier && i.my_picked_tier !== i.win_tier && (
+                          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+                            picked {TIER_LABEL[i.my_picked_tier]}
+                          </Text>
+                        )}
+                      </Group>
                     ))}
                   </Group>
                 )}
@@ -114,6 +128,29 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
         })}
       </Table.Tbody>
     </Table>
+  );
+}
+
+/** Remaining-charges stepper, labeled "x / limit". Admins may set any value 0-99, even above the limit. */
+function ChargeInput({ value, limit, onChange }: { value: number; limit: number; onChange: (v: number) => void }) {
+  const [val, setVal] = useState<number | string>(value);
+  useEffect(() => setVal(value), [value]);
+  return (
+    <Group gap={4} wrap="nowrap">
+      <NumberInput
+        size="xs"
+        w={60}
+        value={val}
+        min={0}
+        max={99}
+        allowDecimal={false}
+        onChange={setVal}
+        onBlur={() => typeof val === 'number' && val !== value && onChange(val)}
+      />
+      <Text size="xs" c="dimmed" title={`Season allowance: ${limit}`}>
+        / {limit}
+      </Text>
+    </Group>
   );
 }
 
@@ -158,19 +195,19 @@ function EditableRow({
       </Table.Td>
       <Table.Td>
         <Group gap={6} wrap="nowrap">
-          <Switch size="xs" color="orange" checked={r.need_available} onChange={(e) => onUpdate(r.id, { needAvailable: e.currentTarget.checked })} />
-          {!r.need_available && (
-            <Badge size="xs" color="yellow" variant="light" title="Need is gone for this session (won with Need or Dibs).">
+          <ChargeInput value={r.need_remaining} limit={r.need_limit} onChange={(v) => onUpdate(r.id, { needRemaining: v })} />
+          {/* {r.need_remaining === 0 && (
+            <Badge size="xs" color="yellow" variant="light" title="No Need charges left this session (won with Need or Dibs).">
               used
             </Badge>
-          )}
+          )} */}
         </Group>
       </Table.Td>
       <Table.Td>
         <Group gap={6} wrap="nowrap">
-          <Switch size="xs" color="grape" checked={r.has_dibs} onChange={(e) => onUpdate(r.id, { hasDibs: e.currentTarget.checked })} />
-          {r.dibs_locked && (
-            <Badge size="xs" color="yellow" variant="light" title="Locked this session: won with Need. Season Dibs is kept.">
+          <ChargeInput value={r.dibs_remaining} limit={r.dibs_limit} onChange={(v) => onUpdate(r.id, { dibsRemaining: v })} />
+          {r.dibs_remaining > 0 && r.need_remaining === 0 && (
+            <Badge size="xs" color="yellow" variant="light" title="Dibs charges left (requires available Need charges).">
               locked
             </Badge>
           )}

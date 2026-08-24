@@ -30,7 +30,17 @@ export function HistoryPage() {
               <Table.Tr key={r.id}>
                 <Table.Td>{r.username}</Table.Td>
                 <Table.Td>ilvl {r.item_level}</Table.Td>
-                <Table.Td>{r.has_dibs ? <Badge size="xs" variant="light" color="grape">Dibs</Badge> : <Text size="xs" c="dimmed">Dibs used</Text>}</Table.Td>
+                <Table.Td>
+                  {r.dibs_remaining > 0 ? (
+                    <Badge size="xs" variant="light" color="grape">
+                      Dibs{r.dibs_remaining > 1 ? ` ×${r.dibs_remaining}` : ''}
+                    </Badge>
+                  ) : (
+                    <Text size="xs" c="dimmed">
+                      Dibs used
+                    </Text>
+                  )}
+                </Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>

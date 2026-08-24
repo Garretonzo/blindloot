@@ -94,25 +94,25 @@
           "url": "https://www.wowhead.com/item=268240"
         },
         {
-          "id": 268231,
-          "name": "Soulslither Spaulders",
-          "icon": "/icons/items/inv_shoulder_mail_raidshamanulatek_d_01.jpg",
-          "slot": "Shoulder",
+          "id": 268230,
+          "name": "Crown of the Eternal Fang",
+          "icon": "/icons/items/inv_helm_mail_raidshamanulatek_d_01.jpg",
+          "slot": "Head",
           "type": "Mail Armor",
           "quality": 4,
           "tooltip": [
             "Item Level 219",
             "Binds when picked up",
-            "Shoulder",
+            "Head",
             "Mail",
-            "96 Armor",
-            "+48 [Agility or Intellect]",
-            "+754 Stamina",
-            "+25 Critical Strike",
-            "+56 Mastery",
+            "105 Armor",
+            "+65 [Agility or Intellect]",
+            "+1,005 Stamina",
+            "+73 Critical Strike",
+            "+34 Mastery",
             "Requires Level 90"
           ],
-          "url": "https://www.wowhead.com/item=268231"
+          "url": "https://www.wowhead.com/item=268230"
         },
         {
           "id": 268216,
@@ -358,27 +358,6 @@
             "Requires Level 90"
           ],
           "url": "https://www.wowhead.com/item=268224"
-        },
-        {
-          "id": 268230,
-          "name": "Crown of the Eternal Fang",
-          "icon": "/icons/items/inv_helm_mail_raidshamanulatek_d_01.jpg",
-          "slot": "Head",
-          "type": "Mail Armor",
-          "quality": 4,
-          "tooltip": [
-            "Item Level 219",
-            "Binds when picked up",
-            "Head",
-            "Mail",
-            "105 Armor",
-            "+65 [Agility or Intellect]",
-            "+1,005 Stamina",
-            "+73 Critical Strike",
-            "+34 Mastery",
-            "Requires Level 90"
-          ],
-          "url": "https://www.wowhead.com/item=268230"
         },
         {
           "id": 268204,
@@ -1628,6 +1607,27 @@
           "url": "https://www.wowhead.com/item=268225"
         },
         {
+          "id": 268231,
+          "name": "Soulslither Spaulders",
+          "icon": "/icons/items/inv_shoulder_mail_raidshamanulatek_d_01.jpg",
+          "slot": "Shoulder",
+          "type": "Mail Armor",
+          "quality": 4,
+          "tooltip": [
+            "Item Level 219",
+            "Binds when picked up",
+            "Shoulder",
+            "Mail",
+            "96 Armor",
+            "+48 [Agility or Intellect]",
+            "+754 Stamina",
+            "+25 Critical Strike",
+            "+56 Mastery",
+            "Requires Level 90"
+          ],
+          "url": "https://www.wowhead.com/item=268231"
+        },
+        {
           "id": 268237,
           "name": "Cuisses of the Uncoiled Union",
           "icon": "/icons/items/inv_pant_mail_raidevokerulatek_d_01.jpg",
@@ -1756,7 +1756,8 @@
             "Equip: Your attacks have a high chance to apply Venomfang, dealing (221 * 6 * 1) Nature damage over 6 sec before bursting to deal 581 Nature damage to nearby enemies. Multiple applications may overlap.",
             "Requires Level 90",
             "\"Do you submit to de loa, or do de loa submit to you?\"",
-            "Bite of Zul'jan (0/3)Zul'jin's Guillotine Technique",
+            "Bite of Zul'jan (0/3)",
+            "Zul'jin's Guillotine Technique",
             "Maze-roa, Warlord's Fury",
             "(2) Set : Perfect your Guillotine technique to ricochet to a second nearby enemy, dealing 100% of its damage and applying Venomfang to both targets."
           ],
@@ -1785,7 +1786,8 @@
             "Equip: Your attacks have a high chance to apply Venomfang, dealing (221 * 6 * 1) Nature damage over 6 sec before bursting to deal 581 Nature damage to nearby enemies. Multiple applications may overlap.",
             "Requires Level 90",
             "\"De loa say our grandfather, de great Zul'jin, betrayed them. But why believe them?\"",
-            "Bite of Zul'jan (0/3)Zul'jin's Guillotine Technique",
+            "Bite of Zul'jan (0/3)",
+            "Zul'jin's Guillotine Technique",
             "Aman'muso, Warlord's Vengeance",
             "(2) Set : Perfect your Guillotine technique to ricochet to a second nearby enemy, dealing 100% of its damage and applying Venomfang to both targets."
           ],
@@ -1827,7 +1829,7 @@
             "Damage increased by 2% for every 1% health the target is missing.",
             "Requires Level 90",
             "\"D'you want axe?\"",
-            "Bite of Zul'jan (0/3)Zul'jin's Guillotine Technique",
+            "Bite of Zul'jan (0/3)",
             "Aman'muso, Warlord's Vengeance",
             "Maze-roa, Warlord's Fury",
             "(2) Set : Perfect your Guillotine technique to ricochet to a second nearby enemy, dealing 100% of its damage and applying Venomfang to both targets."
@@ -2189,27 +2191,6 @@
           "url": "https://www.wowhead.com/item=268232"
         },
         {
-          "id": 268225,
-          "name": "Coiled Hex Legguards",
-          "icon": "/icons/items/inv_pant_leather_raidmonkulatek_d_01.jpg",
-          "slot": "Legs",
-          "type": "Leather Armor",
-          "quality": 4,
-          "tooltip": [
-            "Item Level 219",
-            "Binds when picked up",
-            "Legs",
-            "Leather",
-            "83 Armor",
-            "+65 [Agility or Intellect]",
-            "+1,005 Stamina",
-            "+34 Haste",
-            "+73 Mastery",
-            "Requires Level 90"
-          ],
-          "url": "https://www.wowhead.com/item=268225"
-        },
-        {
           "id": 268247,
           "name": "Breakwater Boots",
           "icon": "/icons/items/inv_boot_leather_raiddemonhunterulatek_d_01.jpg",
@@ -2423,22 +2404,6 @@
             "Requires Level 90"
           ],
           "url": "https://www.wowhead.com/item=270167"
-        },
-        {
-          "id": 279112,
-          "name": "Clumped Asteroidea",
-          "icon": "/icons/items/8033308.jpg",
-          "slot": null,
-          "type": "Decor",
-          "quality": 3,
-          "tooltip": [
-            "5Clumped Asteroidea",
-            "Housing Decor",
-            "Item Level 1",
-            "Binds to Warband",
-            "Use: Add this Decor to your House Chest."
-          ],
-          "url": "https://www.wowhead.com/item=279112"
         }
       ]
     }

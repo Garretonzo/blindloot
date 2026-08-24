@@ -63,9 +63,31 @@ export function SessionPage() {
             {connected ? 'live' : 'offline'}
           </Badge>
           {me && (
-            <Text size="sm" c="dimmed">
-              {me.username}
-            </Text>
+            <>
+              <Badge
+                size="sm"
+                variant="light"
+                color={me.need_remaining > 0 ? 'orange' : 'gray'}
+                title={`Need charges left this session (a Dibs win also spends one). Your admin allows ${me.need_limit} per session.`}
+              >
+                Need {me.need_remaining}/{me.need_limit}
+              </Badge>
+              <Badge
+                size="sm"
+                variant="light"
+                color={me.dibs_remaining > 0 && me.need_remaining > 0 ? 'grape' : 'gray'}
+                title={
+                  me.dibs_remaining > 0 && me.need_remaining === 0
+                    ? `Dibs charges left this season — but Dibs needs an available Need charge, so it's locked right now.`
+                    : `Dibs charges left this season. Your admin allows ${me.dibs_limit} per season.`
+                }
+              >
+                Dibs {me.dibs_remaining}/{me.dibs_limit}
+              </Badge>
+              <Text size="sm" c="dimmed">
+                {me.username}
+              </Text>
+            </>
           )}
         </Group>
       </Group>
@@ -95,13 +117,15 @@ export function SessionPage() {
 
       <SectionCard title="Loot">
         <Alert variant="light" color="orange" mb="md">
-          <b>One Need</b> per week (per difficulty). Win with <b>Dibs</b> and it eats your Need. Win with <b>Need</b> and your Dibs is benched for the
-          week. Need and Dibs are only spent when you <b>win</b>. Losing costs nothing, so... just fucking roll.
+          <b>{detail.season.need_per_session === 1 ? 'One Need win' : `${detail.season.need_per_session} Need wins`}</b> per week (per
+          difficulty), <b>{detail.season.dibs_per_season === 1 ? 'one Dibs' : `${detail.season.dibs_per_season} Dibs`}</b> per season. 
+          A Dibs win also spends a Need charge, and Dibs is locked whenever you're out of Need charges. 
+          Need and Dibs are only spent when you <b>win</b>. Losing costs nothing, so... just fucking roll.
         </Alert>
         {me && detail.session.status === 'open' && unresolved.size > 0 && (
           <Text size="xs" c="dimmed" mb="sm">
             <b>Your pre-picks are your rolls.</b> When loot's done the officer resolves everything from them in one go
-            {live?.shuffle !== false ? ', in random order' : ', in list order'}. No pick, no roll.
+            {live?.shuffle !== false ? '' : ', in list order'}. No pick, no roll.
           </Text>
         )}
         {me && detail.session.status === 'open' && unresolved.size > 0 && live && (
@@ -124,11 +148,13 @@ export function SessionPage() {
             />
           </Group>
         )}
-        {me && bigPlans.length > 1 && (
+        {me && bigPlans.length > (me.need_remaining || 1) && (
           <Alert variant="light" color="red" mb="md" title={`You're pre-picking Need/Dibs on ${bigPlans.length} items`}>
-            You only get one big win. The moment you <b>win</b> one with Need or Dibs, every other Need/Dibs you've pre-picked drops to{' '}
-            <b>Equip</b> automatically. Pre-picking several is fine. It just means "whichever comes first"
-            {live?.shuffle !== false ? ', and the order is random' : ''}. If one of them matters more, maybe think about Needing that one only. The risk is yours. 
+            Every Need or Dibs <b>win</b> spends a Need charge
+            and you have {me.need_remaining} remaining.
+            Once you're out, every other Need/Dibs you've pre-picked drops to <b>Equip</b> automatically. Pre-picking more is fine. It just means "whichever
+            comes first". And since the item roll-off order is pseudo-random, you don't get to choose which one goes first.
+            If some matter more, maybe think about Needing those only. The risk is yours.
           </Alert>
         )}
         <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} raidId={detail.season.raid_id} me={me} plans={plans} onPlan={me ? setPlan : undefined} />
@@ -151,7 +177,7 @@ export function SessionPage() {
 function JoinForm({ sessionId, seasonId, me, onJoined }: { sessionId: number; seasonId: number; me: Identity; onJoined: () => void }) {
   const raiderId = me.raiderId;
   const [itemLevel, setItemLevel] = useState<number | string>('');
-  const [seasonInfo, setSeasonInfo] = useState<{ lastItemLevel: number; hasDibs: boolean } | null | undefined>(undefined);
+  const [seasonInfo, setSeasonInfo] = useState<{ lastItemLevel: number; dibsRemaining: number } | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
 
   // Pre-fill from this raider's record for the season (if they've raided this season before).
@@ -184,12 +210,12 @@ function JoinForm({ sessionId, seasonId, me, onJoined }: { sessionId: number; se
         <NumberInput label="Your item level. Yes, your real one." value={itemLevel} onChange={setItemLevel} min={0} allowDecimal={false} autoFocus />
         {seasonInfo === null && (
           <Text size="xs" c="dimmed">
-            First raid night this season. You start with your Dibs.
+            First raid night this season. You start with full Dibs charges.
           </Text>
         )}
         {seasonInfo && (
           <Text size="xs" c="dimmed">
-            Welcome back. Dibs this season: {seasonInfo.hasDibs ? 'available' : 'already used'}.
+            Welcome back. Dibs left this season: {seasonInfo.dibsRemaining > 0 ? seasonInfo.dibsRemaining : 'none'}.
           </Text>
         )}
         <Button onClick={submit} loading={busy} disabled={itemLevel === ''}>
