@@ -3,9 +3,9 @@ import { RAIDS, raidById, raidLabel } from '../../shared/raids';
 import { SectionCard, SubHeader } from '../components/SectionCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
-import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api, RosterRaider } from '../api';
+import { api, BackupMeta, RosterRaider } from '../api';
 import { useIdentity } from '../identity';
 import { Season, Session } from '../../shared/types';
 
@@ -164,7 +164,7 @@ function RosterRow({
               End login
             </Anchor>
           )}
-          {!!r.has_password && (
+          {!!r.has_password && isSuper && (
             <Anchor component="button" size="xs" onClick={() => onResetPassword(r)} title="Back to passwordless; they set a new one on next login.">
               Reset password
             </Anchor>
@@ -177,6 +177,161 @@ function RosterRow({
         </Group>
       </Table.Td>
     </Table.Tr>
+  );
+}
+
+const fmtBytes = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+const fmtDate = (t: number) => new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+/**
+ * Super-only: in-app restore points plus file export/import, so history survives both
+ * fat-fingered deletes and anything happening to the hosted database.
+ */
+function BackupsCard() {
+  const [backups, setBackups] = useState<BackupMeta[]>([]);
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const load = useCallback(() => {
+    api.admin.backups.list().then(setBackups).catch(() => {});
+  }, []);
+  useEffect(load, [load]);
+
+  const fail = (e: Error) => notifications.show({ color: 'red', message: e.message });
+  const create = async () => {
+    setBusy(true);
+    try {
+      await api.admin.backups.create(name.trim());
+      setName('');
+      load();
+      notifications.show({ color: 'teal', message: 'Restore point created' });
+    } catch (e) {
+      fail(e as Error);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const restore = async (b: BackupMeta) => {
+    if (!confirm(`Restore "${b.name}" (${fmtDate(b.created_at)})?\n\nALL current data will be replaced. A backup of the current state is saved first, so this can be undone.`)) return;
+    setBusy(true);
+    try {
+      await api.admin.backups.restore(b.id);
+      window.location.reload(); // everything changed; start fresh
+    } catch (e) {
+      fail(e as Error);
+      setBusy(false);
+    }
+  };
+  const remove = (b: BackupMeta) =>
+    confirm(`Delete restore point "${b.name}"?`) && api.admin.backups.delete(b.id).then(load).catch(fail);
+  const importFile = async (file: File) => {
+    setBusy(true);
+    try {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(await file.text());
+      } catch {
+        throw new Error('That is not a backup file (invalid JSON)');
+      }
+      if (!confirm(`Import "${file.name}"?\n\nALL current data will be replaced by the file's contents. A backup of the current state is saved first, so this can be undone.`)) return;
+      await api.admin.backups.import(parsed);
+      window.location.reload();
+    } catch (e) {
+      fail(e as Error);
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <SectionCard
+      title="Backups"
+      collapsible
+      defaultOpen={false}
+      right={
+        <Group gap="sm">
+          <Anchor href="/api/admin/export" size="sm" title="Download all current data as a file you can keep locally.">
+            Export data
+          </Anchor>
+          <Anchor component="button" size="sm" onClick={() => fileRef.current?.click()} title="Replace all data with a previously exported file.">
+            Import…
+          </Anchor>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            style={{ display: 'none' }}
+            onChange={(e) => e.currentTarget.files?.[0] && importFile(e.currentTarget.files[0])}
+          />
+        </Group>
+      }
+    >
+      <Group align="flex-end" mb="sm">
+        <TextInput
+          style={{ flex: 1 }}
+          size="xs"
+          placeholder="Restore point name (e.g. before season cleanup)"
+          value={name}
+          maxLength={60}
+          onChange={(e) => setName(e.currentTarget.value)}
+          onKeyDown={(e) => e.key === 'Enter' && create()}
+        />
+        <Button size="xs" onClick={create} loading={busy}>
+          Create restore point
+        </Button>
+      </Group>
+      {backups.length === 0 ? (
+        <Text size="sm" c="dimmed">
+          No restore points yet. Create one before risky changes — restoring replaces all data with the snapshot.
+        </Text>
+      ) : (
+        <Table verticalSpacing={4} withRowBorders={false}>
+          <Table.Tbody>
+            {backups.map((b) => (
+              <Table.Tr key={b.id}>
+                <Table.Td>
+                  <Group gap={6} wrap="nowrap">
+                    <Text size="sm">{b.name}</Text>
+                    {b.kind !== 'manual' && (
+                      <Badge size="xs" variant="light" color="gray" title="Created automatically before a restore/import; only the newest few are kept.">
+                        auto
+                      </Badge>
+                    )}
+                  </Group>
+                </Table.Td>
+                <Table.Td w={190}>
+                  <Text size="xs" c="dimmed">
+                    {fmtDate(b.created_at)}
+                  </Text>
+                </Table.Td>
+                <Table.Td w={80}>
+                  <Text size="xs" c="dimmed">
+                    {fmtBytes(b.bytes)}
+                  </Text>
+                </Table.Td>
+                <Table.Td w={210} ta="right">
+                  <Group gap="sm" justify="flex-end">
+                    <Anchor component="button" size="xs" onClick={() => restore(b)} disabled={busy}>
+                      Restore
+                    </Anchor>
+                    <Anchor href={`/api/admin/backups/${b.id}/export`} size="xs">
+                      Download
+                    </Anchor>
+                    <Anchor component="button" size="xs" c="red" onClick={() => remove(b)}>
+                      Delete
+                    </Anchor>
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
+      <Text size="xs" c="dimmed" mt="xs">
+        Restore points live in the site's database. Use Export now and then to keep a copy on your own disk.
+      </Text>
+    </SectionCard>
   );
 }
 
@@ -376,6 +531,8 @@ export function AdminHome() {
       </SectionCard>
 
       <RosterCard isSuper={isSuper} />
+
+      {isSuper && <BackupsCard />}
 
       {data.seasons.map((season) => (
         <SectionCard

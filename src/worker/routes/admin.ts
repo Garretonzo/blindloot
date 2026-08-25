@@ -1,7 +1,21 @@
 import { Hono } from 'hono';
 import { Env } from '../env';
 import { clearAdminCookie, getRole, requireAdmin, requireSuper, roleForPassword, setAdminCookie } from '../auth';
-import { clearSession, notifySession, presenceStub, sessionStub } from '../session';
+import { clearSession, notifySession, presenceStub, resetSessionLive, sessionStub } from '../session';
+import {
+  BackupKind,
+  deleteBackup,
+  listBackups,
+  loadBackup,
+  loadBackupJson,
+  MAX_TOTAL_BACKUP_BYTES,
+  restoreSnapshot,
+  Snapshot,
+  storeBackup,
+  takeSnapshot,
+  totalBackupBytes,
+  validateSnapshot,
+} from '../backup';
 import {
   getSessionRolls,
   joinSession,
@@ -66,6 +80,107 @@ adminRoutes.delete('/seasons/:id', requireSuper, async (c) => {
   await db.batch(stmts);
   for (const s of sessions.results) await clearSession(c.env, s.id);
   return c.json({ ok: true });
+});
+
+// ---- super admin: restore points + export/import ----
+
+const exportHeaders = (createdAt: number) => ({
+  'content-type': 'application/json',
+  'content-disposition': `attachment; filename="jfr-backup-${new Date(createdAt).toISOString().slice(0, 10)}.json"`,
+});
+
+/**
+ * Replace all data with a snapshot, after saving an automatic safety backup of the
+ * current state. Then reconcile the Durable Objects, which may hold live roll-off state
+ * that no longer matches D1. DO resets are kept to the handful of sessions that can
+ * actually hold live state (each reset is a subrequest, capped per invocation): sessions
+ * restored as non-closed, and sessions that were mid-roll-off before the restore. Idle
+ * viewers of other old sessions simply see fresh data on their next page load.
+ */
+async function performRestore(env: Env, snap: Snapshot, kind: Exclude<BackupKind, 'manual'>, backupName: string) {
+  const db = env.DB;
+  const pre = await db.prepare('SELECT id, status FROM sessions').all<{ id: number; status: string }>();
+  const preRaiders = await db.prepare('SELECT id FROM raiders').all<{ id: number }>();
+  const preBackup = await storeBackup(db, backupName, kind, await takeSnapshot(db));
+
+  await restoreSnapshot(db, snap);
+
+  const post = new Map(snap.tables.sessions.map((s) => [Number(s.id), String(s.status)]));
+  const wasLive = new Set(pre.results.filter((s) => s.status === 'staging' || s.status === 'rolling').map((s) => s.id));
+  for (const s of pre.results) if (!post.has(s.id)) await clearSession(env, s.id);
+  for (const [id, status] of post) {
+    if (status !== 'closed') await resetSessionLive(env, id, 'open');
+    else if (wasLive.has(id)) await resetSessionLive(env, id, 'closed');
+  }
+
+  if (kind === 'pre-import') {
+    // Foreign snapshot: raider ids may now mean different people, so end every login.
+    await presenceStub(env).fetch('https://do/end-all', { method: 'POST' });
+  } else {
+    const postRaiders = new Set(snap.tables.raiders.map((r) => Number(r.id)));
+    for (const r of preRaiders.results) {
+      if (!postRaiders.has(r.id)) await presenceStub(env).fetch(`https://do/end?raiderId=${r.id}`, { method: 'POST' });
+    }
+  }
+  return preBackup;
+}
+
+adminRoutes.get('/backups', requireSuper, async (c) => c.json(await listBackups(c.env.DB)));
+
+adminRoutes.post('/backups', requireSuper, async (c) => {
+  const { name } = await c.req.json<{ name?: string }>().catch(() => ({ name: undefined }));
+  const label = (name ?? '').trim().slice(0, 60) || new Date().toISOString().slice(0, 16).replace('T', ' ');
+  if ((await totalBackupBytes(c.env.DB)) > MAX_TOTAL_BACKUP_BYTES) {
+    return c.json({ error: 'backup storage is full; delete old restore points first' }, 409);
+  }
+  const meta = await storeBackup(c.env.DB, label, 'manual', await takeSnapshot(c.env.DB));
+  return c.json(meta);
+});
+
+adminRoutes.delete('/backups/:id', requireSuper, async (c) => {
+  await deleteBackup(c.env.DB, Number(c.req.param('id')));
+  return c.json({ ok: true });
+});
+
+adminRoutes.post('/backups/:id/restore', requireSuper, async (c) => {
+  const id = Number(c.req.param('id'));
+  const source = await c.env.DB.prepare('SELECT name FROM backups WHERE id = ?').bind(id).first<{ name: string }>();
+  if (!source) return c.json({ error: 'restore point not found' }, 404);
+  const snap = await loadBackup(c.env.DB, id);
+  if (!snap) return c.json({ error: 'restore point not found' }, 404);
+  const preBackup = await performRestore(c.env, snap, 'pre-restore', `before restoring "${source.name}"`);
+  return c.json({ ok: true, preBackupId: preBackup.id });
+});
+
+/** Download the current data as a backup file. */
+adminRoutes.get('/export', requireSuper, async (c) => {
+  const snap = await takeSnapshot(c.env.DB);
+  return new Response(JSON.stringify(snap), { headers: exportHeaders(snap.createdAt) });
+});
+
+/** Download a stored restore point as a backup file. */
+adminRoutes.get('/backups/:id/export', requireSuper, async (c) => {
+  const id = Number(c.req.param('id'));
+  const meta = await c.env.DB.prepare('SELECT created_at FROM backups WHERE id = ?').bind(id).first<{ created_at: number }>();
+  const json = meta ? await loadBackupJson(c.env.DB, id) : null;
+  if (json == null) return c.json({ error: 'restore point not found' }, 404);
+  return new Response(json, { headers: exportHeaders(meta!.created_at) });
+});
+
+/** Upload a backup file and replace everything with it (a pre-import restore point is saved first). */
+adminRoutes.post('/import', requireSuper, async (c) => {
+  const len = Number(c.req.header('content-length') ?? 0);
+  if (len > 25 * 1024 * 1024) return c.json({ error: 'file too large' }, 413);
+  let snap: Snapshot;
+  try {
+    const body: unknown = JSON.parse(await c.req.text());
+    validateSnapshot(body);
+    snap = body;
+  } catch (e) {
+    return c.json({ error: `invalid backup file: ${(e as Error).message}` }, 400);
+  }
+  const preBackup = await performRestore(c.env, snap, 'pre-import', 'before import');
+  return c.json({ ok: true, preBackupId: preBackup.id });
 });
 
 // ---- seasons ----
@@ -211,9 +326,23 @@ adminRoutes.post('/sessions/:id/bosses/:bossId/items', async (c) => {
   return c.json({ ok: true });
 });
 
+/**
+ * History-safe deletion gate: anyone with admin can delete loot that has no recorded
+ * rolls (fixing a typo loses nothing), but destroying roll history takes the super admin.
+ */
+async function requireSuperIfHistory(c: Parameters<typeof getRole>[0], rollCount: number): Promise<Response | null> {
+  if (rollCount > 0 && (await getRole(c)) !== 'super') {
+    return c.json({ error: 'this would delete roll history; super admin required' }, 403);
+  }
+  return null;
+}
+
 adminRoutes.delete('/sessions/:id/items/:itemId', async (c) => {
   const sessionId = Number(c.req.param('id'));
   const itemId = Number(c.req.param('itemId'));
+  const rolls = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM rolls WHERE item_id = ?').bind(itemId).first<{ n: number }>();
+  const denied = await requireSuperIfHistory(c, rolls?.n ?? 0);
+  if (denied) return denied;
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM rolls WHERE item_id = ?').bind(itemId),
     c.env.DB.prepare('DELETE FROM plans WHERE item_id = ?').bind(itemId),
@@ -370,6 +499,11 @@ adminRoutes.post('/sessions/:id/items/:itemId/award', async (c) => {
 adminRoutes.delete('/sessions/:id/bosses/:bossId', async (c) => {
   const sessionId = Number(c.req.param('id'));
   const bossId = Number(c.req.param('bossId'));
+  const rolls = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM rolls WHERE item_id IN (SELECT id FROM items WHERE boss_id = ?)')
+    .bind(bossId)
+    .first<{ n: number }>();
+  const denied = await requireSuperIfHistory(c, rolls?.n ?? 0);
+  if (denied) return denied;
   await c.env.DB.batch([
     c.env.DB.prepare('DELETE FROM rolls WHERE item_id IN (SELECT id FROM items WHERE boss_id = ?)').bind(bossId),
     c.env.DB.prepare('DELETE FROM plans WHERE item_id IN (SELECT id FROM items WHERE boss_id = ?)').bind(bossId),
@@ -389,7 +523,7 @@ adminRoutes.get('/raiders', async (c) => {
 });
 
 /** Reset a raider to passwordless (lockout recovery); their next login prompts them to set a new one. */
-adminRoutes.delete('/raiders/:id/password', async (c) => {
+adminRoutes.delete('/raiders/:id/password', requireSuper, async (c) => {
   await c.env.DB.prepare('UPDATE raiders SET password_hash = NULL WHERE id = ?').bind(Number(c.req.param('id'))).run();
   return c.json({ ok: true });
 });

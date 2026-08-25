@@ -61,6 +61,11 @@ export class PresenceDO extends DurableObject<Env> {
         if (raiderId) await this.end(raiderId, 4001, 'ended by admin');
         return Response.json({ ok: true });
       }
+      case '/end-all': {
+        // After a data import, raider ids may mean different people: end every login.
+        for (const id of Object.keys(this.logins)) await this.end(Number(id), 4001, 'ended by admin');
+        return Response.json({ ok: true });
+      }
       case '/check': {
         const l = raiderId ? this.logins[raiderId] : undefined;
         return Response.json({ ok: !!l && l.token === token && this.isActive(l) });

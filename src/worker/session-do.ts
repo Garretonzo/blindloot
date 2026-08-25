@@ -88,6 +88,16 @@ export class SessionDO extends DurableObject<Env> {
       return new Response('ok');
     }
 
+    if (url.pathname === '/reset-live') {
+      // A restore/import rewrote this session's durable data: any live roll-off state is
+      // stale (or belongs to a previous session that had this id). Reset to a clean phase
+      // but keep websockets open — connected clients just receive the new state and refetch.
+      await this.ctx.storage.deleteAlarm();
+      const phase = url.searchParams.get('phase') === 'closed' ? 'closed' : 'open';
+      await this.save({ ...initialState(), phase, revision: this.state.revision + 1 });
+      return new Response('ok');
+    }
+
     if (url.pathname === '/clear') {
       // Session deleted: drop live state, timers and connections.
       await this.ctx.storage.deleteAlarm();

@@ -65,6 +65,22 @@ The running app never contacts those sites — only re-run the script to refresh
 Each pool is one WoW season; to add another, generate its JSON/icons with the script and list it
 in `src/shared/raids/index.ts` (`RAIDS`) — it then appears in the "New season" dropdown.
 
+## Backups
+
+The super admin gets a **Backups** card on the admin page:
+
+- **Restore points** — named full snapshots of every table, stored in D1 itself
+  (`backups`/`backup_chunks`, migration `0002`). Restoring replaces all data with the
+  snapshot; a `pre-restore`/`pre-import` snapshot of the current state is saved
+  automatically first, so any restore can be undone. Only the newest 3 auto snapshots
+  per kind are kept; manual ones are kept until deleted.
+- **Export / Import** — download all data as a JSON file (same snapshot format) to keep a
+  copy off-site, and import such a file to replace everything (e.g. onto a fresh database).
+
+Deletions are gated: seasons, sessions, roster raiders, password resets and any boss/item
+**with recorded rolls** require the super admin; regular admins can still delete unrolled
+loot (fixing a typo loses nothing).
+
 ## Deploy to Cloudflare
 
 ```sh

@@ -48,6 +48,8 @@ export const api = {
   logout: (id: Identity) => req('POST', '/api/logout', { raiderId: id.raiderId, token: id.token }),
   mySeasons: (raiderId: number) =>
     req<{ seasonId: number; dibsRemaining: number; lastItemLevel: number }[]>('GET', `/api/raiders/${raiderId}/seasons`),
+  /** Everything the logged-in raider has ever won, across all seasons, newest first. */
+  myWins: (me: Identity) => req<{ wins: MyWin[] }>('GET', `/api/raiders/${me.raiderId}/wins?token=${encodeURIComponent(me.token)}`),
   join: (id: number, me: Identity, itemLevel: number) =>
     req<{ raiderId: number; username: string }>('POST', `/api/sessions/${id}/join`, { raiderId: me.raiderId, token: me.token, itemLevel }),
 
@@ -96,8 +98,38 @@ export const api = {
     removeRaider: (sessionId: number, raiderId: number) =>
       req('DELETE', `/api/admin/sessions/${sessionId}/raiders/${raiderId}`),
     history: (seasonId: number) => req<HistoryData>('GET', `/api/admin/seasons/${seasonId}/history`),
+    backups: {
+      list: () => req<BackupMeta[]>('GET', '/api/admin/backups'),
+      create: (name: string) => req<BackupMeta>('POST', '/api/admin/backups', { name }),
+      restore: (id: number) => req<{ ok: true; preBackupId: number }>('POST', `/api/admin/backups/${id}/restore`),
+      delete: (id: number) => req('DELETE', `/api/admin/backups/${id}`),
+      /** Upload a previously exported backup file's JSON text and replace everything with it. */
+      import: (json: unknown) => req<{ ok: true; preBackupId: number }>('POST', '/api/admin/import', json),
+    },
   },
 };
+
+/** One item the raider won, with enough context to show it outside its session. */
+export interface MyWin {
+  itemId: number;
+  name: string;
+  icon: string | null;
+  winTier: Tier | null;
+  resolvedAt: number;
+  bossName: string;
+  bossIcon: string | null;
+  sessionId: number;
+  sessionName: string;
+  seasonId: number;
+}
+
+export interface BackupMeta {
+  id: number;
+  name: string;
+  kind: 'manual' | 'pre-restore' | 'pre-import';
+  created_at: number;
+  bytes: number;
+}
 
 export interface PlanPreview {
   raiderId: number;

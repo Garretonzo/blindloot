@@ -191,6 +191,51 @@ publicRoutes.get('/raiders/:id/seasons', async (c) => {
   return c.json(rows.results.map((r) => ({ seasonId: r.season_id, dibsRemaining: r.dibs_remaining, lastItemLevel: r.last_item_level })));
 });
 
+/** Everything a raider has ever won, across all seasons, newest first. Their own tiers are theirs to see. */
+publicRoutes.get('/raiders/:id/wins', async (c) => {
+  const raiderId = Number(c.req.param('id'));
+  if (!(await checkLogin(c.env, raiderId, c.req.query('token') ?? ''))) return c.json({ error: 'not logged in' }, 401);
+  const rows = await c.env.DB.prepare(
+    `SELECT i.id AS item_id, i.name, i.icon, i.win_tier, i.resolved_at,
+            b.name AS boss_name, b.icon AS boss_icon,
+            s.id AS session_id, s.name AS session_name,
+            se.id AS season_id
+     FROM items i
+     JOIN bosses b ON b.id = i.boss_id
+     JOIN sessions s ON s.id = b.session_id
+     JOIN seasons se ON se.id = s.season_id
+     WHERE i.winner_raider_id = ?1 AND i.resolved_at IS NOT NULL
+     ORDER BY i.resolved_at DESC, i.id DESC`,
+  )
+    .bind(raiderId)
+    .all<{
+      item_id: number;
+      name: string;
+      icon: string | null;
+      win_tier: Tier | null;
+      resolved_at: number;
+      boss_name: string;
+      boss_icon: string | null;
+      session_id: number;
+      session_name: string;
+      season_id: number;
+    }>();
+  return c.json({
+    wins: rows.results.map((r) => ({
+      itemId: r.item_id,
+      name: r.name,
+      icon: r.icon,
+      winTier: r.win_tier,
+      resolvedAt: r.resolved_at,
+      bossName: r.boss_name,
+      bossIcon: r.boss_icon,
+      sessionId: r.session_id,
+      sessionName: r.session_name,
+      seasonId: r.season_id,
+    })),
+  });
+});
+
 publicRoutes.post('/sessions/:id/join', async (c) => {
   const sessionId = Number(c.req.param('id'));
   const body = await c.req.json<{ raiderId?: number; token?: string; itemLevel?: number }>();

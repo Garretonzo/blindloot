@@ -3,17 +3,19 @@ import { IconChevronRight, IconMoodEmpty } from '@tabler/icons-react';
 import { SectionCard } from '../components/SectionCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/ItemList';
+import { MyLoot } from '../components/MyLoot';
 import { useIdentity } from '../identity';
 import { raidById } from '../../shared/raids';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../api';
+import { api, MyWin } from '../api';
 import { Season, Session } from '../../shared/types';
 
 export function Home() {
   const { identity } = useIdentity();
   const [data, setData] = useState<{ seasons: Season[]; sessions: Session[] } | null>(null);
   const [mine, setMine] = useState<Record<number, { dibsRemaining: number }>>({});
+  const [wins, setWins] = useState<MyWin[]>([]);
 
   useEffect(() => {
     api.seasons().then(setData).catch(() => setData({ seasons: [], sessions: [] }));
@@ -22,6 +24,12 @@ export function Home() {
         .mySeasons(identity.raiderId)
         .then((rows) => setMine(Object.fromEntries(rows.map((r) => [r.seasonId, r]))))
         .catch(() => {});
+      api
+        .myWins(identity)
+        .then((r) => setWins(r.wins))
+        .catch(() => {});
+    } else {
+      setWins([]);
     }
   }, [identity]);
 
@@ -84,6 +92,7 @@ export function Home() {
                 </Text>
               )}
             </Stack>
+            <MyLoot wins={wins.filter((w) => w.seasonId === season.id)} raidId={season.raid_id} />
           </SectionCard>
         );
       })}

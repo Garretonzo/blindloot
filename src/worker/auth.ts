@@ -44,8 +44,12 @@ export async function verifyPassword(password: string, stored: string): Promise<
   }
 }
 
-async function roleToken(env: Env, role: Role): Promise<string> {
-  return `${role}:${await hmac(env.ADMIN_PASSWORD, `role-v1:${role}`)}`;
+/** Exported for tests. */
+export async function roleToken(env: Env, role: Role): Promise<string> {
+  // Each role's token is keyed with that role's own password: a regular admin (who knows
+  // ADMIN_PASSWORD) must not be able to compute the super token offline.
+  const secret = role === 'super' ? env.SUPER_ADMIN_PASSWORD! : env.ADMIN_PASSWORD;
+  return `${role}:${await hmac(secret, `role-v1:${role}`)}`;
 }
 
 /** Returns the role encoded in the admin cookie, or null if absent/invalid. */
@@ -54,6 +58,7 @@ export async function getRole(c: Context<{ Bindings: Env }>): Promise<Role | nul
   if (!cookie) return null;
   const role = cookie.split(':')[0] as Role;
   if (role !== 'admin' && role !== 'super') return null;
+  if (role === 'super' && !c.env.SUPER_ADMIN_PASSWORD) return null;
   return cookie === (await roleToken(c.env, role)) ? role : null;
 }
 
