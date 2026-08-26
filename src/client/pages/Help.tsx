@@ -193,7 +193,7 @@ export function HelpPage() {
           <Accordion.Item value="give">
             <Accordion.Control>I won something I don't actually want.</Accordion.Control>
             <Accordion.Panel>
-              Tell the loot officer. They can hand it to the runner-up, and your Need/Dibs is refunded if you'd used it. Also: maybe don't roll
+              The general policy is no takebacks. However, if you feel you have a compelling case, contact the loot officer. Your case will be reviewed and the item may be handed to the runner-up. In extreme circumstances, your Need/Dibs roll may be refunded. No promises. Also: maybe don't roll
               on things you don't want.
             </Accordion.Panel>
           </Accordion.Item>

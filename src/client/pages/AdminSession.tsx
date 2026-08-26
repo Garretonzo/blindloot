@@ -304,6 +304,8 @@ export function AdminSessionPage() {
       <SectionCard title="Raiders" collapsible defaultOpen right={<Text size="xs" c="dimmed">{detail.raiders.length} joined</Text>}>
         <RaiderTable
           raiders={detail.raiders}
+          bosses={detail.bosses}
+          raidId={detail.season.raid_id}
           editable={phase !== 'closed'}
           readyIds={phase === 'ready' ? live?.readyRaiderIds : undefined}
           lockedIn={phase === 'open' ? live?.lockedIn : undefined}

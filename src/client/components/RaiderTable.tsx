@@ -41,6 +41,43 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
       </Table.Td>
     ) : null;
 
+  const items = bosses.flatMap((b) => b.items);
+  const lootCell = (id: number) => {
+    const won = items.filter((i) => i.winner_raider_id === id);
+    return (
+      <Table.Td>
+        {won.length === 0 ? (
+          <Text size="xs" c="dimmed">
+            —
+          </Text>
+        ) : (
+          <Group gap={6}>
+            {won.map((i) => (
+              <Group key={i.id} gap={4} wrap="nowrap">
+                <ItemTooltip raidId={raidId} name={i.name}>
+                  <Badge size="sm" variant="light" color="gray" leftSection={<Icon src={i.icon} size={14} />}>
+                    {i.name}
+                  </Badge>
+                </ItemTooltip>
+                {/* win_tier is only sent for the viewer's own wins: show how they won it, and their pre-pick. */}
+                {i.win_tier && (
+                  <span title={i.my_picked_tier ? `You pre-picked ${TIER_LABEL[i.my_picked_tier]}; it counted as ${TIER_LABEL[i.win_tier]}.` : `Won via ${TIER_LABEL[i.win_tier]} (no pre-pick, rolled live).`}>
+                    <TierBadge tier={i.win_tier} />
+                  </span>
+                )}
+                {i.win_tier && i.my_picked_tier && i.my_picked_tier !== i.win_tier && (
+                  <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+                    picked {TIER_LABEL[i.my_picked_tier]}
+                  </Text>
+                )}
+              </Group>
+            ))}
+          </Group>
+        )}
+      </Table.Td>
+    );
+  };
+
   if (editable) {
     return (
       <Table verticalSpacing="xs" withRowBorders={false}>
@@ -50,6 +87,7 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
             <Table.Th>ilvl</Table.Th>
             <Table.Th>Need</Table.Th>
             <Table.Th>Dibs</Table.Th>
+            <Table.Th>Loot this session</Table.Th>
             {lockedIn && <Table.Th>Picks</Table.Th>}
             {readyIds && <Table.Th>Ready</Table.Th>}
             <Table.Th />
@@ -57,7 +95,7 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
         </Table.Thead>
         <Table.Tbody>
           {raiders.map((r) => (
-            <EditableRow key={r.id} r={r} ready={readyIds ? ready.has(r.id) : undefined} picks={picksCell(r.id)} onUpdate={onUpdate!} onRemove={onRemove!} />
+            <EditableRow key={r.id} r={r} ready={readyIds ? ready.has(r.id) : undefined} loot={lootCell(r.id)} picks={picksCell(r.id)} onUpdate={onUpdate!} onRemove={onRemove!} />
           ))}
         </Table.Tbody>
       </Table>
@@ -65,7 +103,6 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
   }
 
   // Public view: name, item level and what they've won — never Need / Dibs state.
-  const items = bosses.flatMap((b) => b.items);
   return (
     <Table verticalSpacing="xs" withRowBorders={false}>
       <Table.Thead>
@@ -79,7 +116,6 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
       </Table.Thead>
       <Table.Tbody>
         {raiders.map((r) => {
-          const won = items.filter((i) => i.winner_raider_id === r.id);
           return (
             <Table.Tr key={r.id} style={r.id === meId ? { background: 'rgba(18,184,134,0.08)' } : undefined}>
               <Table.Td fw={r.id === meId ? 700 : 400} c={r.id === meId ? 'teal.2' : undefined} style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
@@ -91,36 +127,7 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
                 )}
               </Table.Td>
               <Table.Td style={{ verticalAlign: 'top' }}>{r.item_level || '—'}</Table.Td>
-              <Table.Td>
-                {won.length === 0 ? (
-                  <Text size="xs" c="dimmed">
-                    —
-                  </Text>
-                ) : (
-                  <Group gap={6}>
-                    {won.map((i) => (
-                      <Group key={i.id} gap={4} wrap="nowrap">
-                        <ItemTooltip raidId={raidId} name={i.name}>
-                          <Badge size="sm" variant="light" color="gray" leftSection={<Icon src={i.icon} size={14} />}>
-                            {i.name}
-                          </Badge>
-                        </ItemTooltip>
-                        {/* win_tier is only sent for the viewer's own wins: show how they won it, and their pre-pick. */}
-                        {i.win_tier && (
-                          <span title={i.my_picked_tier ? `You pre-picked ${TIER_LABEL[i.my_picked_tier]}; it counted as ${TIER_LABEL[i.win_tier]}.` : `Won via ${TIER_LABEL[i.win_tier]} (no pre-pick, rolled live).`}>
-                            <TierBadge tier={i.win_tier} />
-                          </span>
-                        )}
-                        {i.win_tier && i.my_picked_tier && i.my_picked_tier !== i.win_tier && (
-                          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-                            picked {TIER_LABEL[i.my_picked_tier]}
-                          </Text>
-                        )}
-                      </Group>
-                    ))}
-                  </Group>
-                )}
-              </Table.Td>
+              {lootCell(r.id)}
               {picksCell(r.id)}
               {readyIds && <Table.Td>{ready.has(r.id) ? '✓' : ''}</Table.Td>}
             </Table.Tr>
@@ -157,12 +164,14 @@ function ChargeInput({ value, limit, onChange }: { value: number; limit: number;
 function EditableRow({
   r,
   ready,
+  loot,
   picks,
   onUpdate,
   onRemove,
 }: {
   r: Raider;
   ready?: boolean;
+  loot?: React.ReactNode;
   picks?: React.ReactNode;
   onUpdate: NonNullable<Props['onUpdate']>;
   onRemove: NonNullable<Props['onRemove']>;
@@ -213,6 +222,7 @@ function EditableRow({
           )}
         </Group>
       </Table.Td>
+      {loot}
       {picks}
       {ready !== undefined && <Table.Td>{ready ? '✓' : ''}</Table.Td>}
       <Table.Td>
