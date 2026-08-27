@@ -45,7 +45,9 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
           : null;
         return (
           <div key={r.id} style={isMe ? { background: 'rgba(18,184,134,0.06)', borderRadius: 6, margin: '0 -8px', padding: '2px 8px' } : undefined}>
-            <Group gap="xs" wrap="nowrap">
+            {/* my="xs" mirrors the Loot card's SubHeader margins: air below the name before the
+                loot rows, and between one raider's last item and the next raider's header. */}
+            <Group gap="xs" wrap="nowrap" my="xs">
               <RaiderAvatar avatar={r.avatar} username={r.username} size="md" ring />
               <Text size="xs" fw={700} tt="uppercase" c={isMe ? 'teal.2' : 'teal.3'} style={{ letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
                 {r.username}
@@ -73,7 +75,7 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
               )}
             </Group>
             {won.length > 0 && (
-              <Stack gap={4} pl="xl" mt={4}>
+              <Stack gap={4} pl="sm">
                 {won.map(({ item, bossName }) => (
                   <LootRow key={item.id} item={item} bossName={bossName} raidId={raidId} />
                 ))}

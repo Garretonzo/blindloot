@@ -71,6 +71,8 @@ export const api = {
     updateSeasonLimits: (seasonId: number, limits: { dibsPerSeason?: number; needPerSession?: number }) =>
       req('PATCH', `/api/admin/seasons/${seasonId}`, limits),
     renameSession: (sessionId: number, name: string) => req('PATCH', `/api/admin/sessions/${sessionId}`, { name }),
+    /** Unsanitized session detail — the public api.session() is always raider-sanitized, even for admins. */
+    session: (sessionId: number) => req<SessionDetail>('GET', `/api/admin/sessions/${sessionId}/detail`),
     deleteSeason: (seasonId: number) => req('DELETE', `/api/admin/seasons/${seasonId}`),
     createSession: (seasonId: number, name: string) =>
       req<Session>('POST', '/api/admin/sessions', { seasonId, name }),

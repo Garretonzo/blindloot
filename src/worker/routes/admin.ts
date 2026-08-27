@@ -17,6 +17,7 @@ import {
   validateSnapshot,
 } from '../backup';
 import {
+  getSessionDetail,
   getSessionRolls,
   joinSession,
   LAST_ILVL_SQL,
@@ -691,6 +692,13 @@ adminRoutes.delete('/sessions/:id/raiders/:raiderId', async (c) => {
     .run();
   await notifySession(c.env, sessionId);
   return c.json({ ok: true });
+});
+
+/** Unsanitized session detail (all tiers and charge states) for the admin session page. */
+adminRoutes.get('/sessions/:id/detail', async (c) => {
+  const detail = await getSessionDetail(c.env.DB, Number(c.req.param('id')));
+  if (!detail) return c.json({ error: 'not found' }, 404);
+  return c.json(detail);
 });
 
 adminRoutes.get('/sessions/:id/live', async (c) => {

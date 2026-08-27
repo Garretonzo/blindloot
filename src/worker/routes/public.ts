@@ -37,8 +37,9 @@ publicRoutes.get('/seasons', async (c) => {
 publicRoutes.get('/sessions/:id', async (c) => {
   const detail = await getSessionDetail(c.env.DB, Number(c.req.param('id')));
   if (!detail) return c.json({ error: 'not found' }, 404);
-  if (await isAdmin(c)) return c.json(detail);
 
+  // ALWAYS sanitized — even for admins. The raider-facing page must never show privileged
+  // info (tiers, others' charges); the admin page uses GET /api/admin/sessions/:id/detail.
   // Raiders see who won (not how) and everyone's item level, but only their own Need / Dibs
   // state — and on items they won themselves, the winning tier plus their own pre-pick.
   const meId = c.get('authedRaiderId');
@@ -313,6 +314,8 @@ publicRoutes.get('/sessions/:id/ws', async (c) => {
   if (raiderId) target.searchParams.set('raiderId', String(raiderId));
 
   const headers = new Headers(c.req.raw.headers);
-  headers.set('X-Admin', (await isAdmin(c)) ? '1' : '0');
+  // The admin page asks for the admin view explicitly (?admin=1); the raider page never does,
+  // so even a logged-in admin sees only the sanitized raider view there.
+  headers.set('X-Admin', c.req.query('admin') === '1' && (await isAdmin(c)) ? '1' : '0');
   return sessionStub(c.env, sessionId).fetch(new Request(target, { headers }));
 });

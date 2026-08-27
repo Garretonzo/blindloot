@@ -1,4 +1,5 @@
-import { Anchor, Badge, Button, Group, NumberInput, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Anchor, Badge, Button, Divider, Group, NumberInput, Select, Stack, Table, Text, TextInput, Title, UnstyledButton } from '@mantine/core';
+import { IconChevronDown, IconChevronRight } from '@tabler/icons-react';
 import { RAIDS, raidById, raidLabel } from '../../shared/raids';
 import { SectionCard, SubHeader } from '../components/SectionCard';
 import { ChargeInput } from '../components/RaiderTable';
@@ -433,6 +434,7 @@ function SeasonLimits({ season, onSaved }: { season: Season; onSaved: () => void
 
 /** Per-raider season-level Dibs counts (Dibs charges are season-scoped, so they're edited here). */
 function SeasonRaiders({ season }: { season: Season }) {
+  const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<{ id: number; username: string; dibs_remaining: number }[] | null>(null);
   const load = useCallback(() => {
     api.admin.seasonRaiders(season.id).then(setRows).catch(() => {});
@@ -446,27 +448,61 @@ function SeasonRaiders({ season }: { season: Season }) {
       .catch((e: Error) => notifications.show({ color: 'red', message: e.message }));
 
   if (!rows) return null;
+  const withDibs = rows.filter((r) => r.dibs_remaining > 0).length;
   return (
     <>
-      <SubHeader>Raider Dibs</SubHeader>
-      {rows.length === 0 ? (
-        <Text size="sm" c="dimmed" mb="sm" pl="sm">
-          Raiders appear here once they join a session this season.
-        </Text>
-      ) : (
-        <Table verticalSpacing={4} withRowBorders={false} mb="sm" w="auto" pl="sm">
-          <Table.Tbody>
-            {rows.map((r) => (
-              <Table.Tr key={r.id}>
-                <Table.Td>{r.username}</Table.Td>
-                <Table.Td>
-                  <ChargeInput value={r.dibs_remaining} limit={season.dibs_per_season} onChange={(v) => setDibs(r.id, v)} />
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      )}
+      <UnstyledButton onClick={() => setOpen((o) => !o)} w="100%" title={open ? 'Collapse' : 'Expand'}>
+        <Divider
+          my="xs"
+          labelPosition="left"
+          label={
+            <Group gap="xs">
+              {open ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+              <Text size="xs" fw={700} tt="uppercase" c="teal.3" style={{ letterSpacing: '0.06em' }}>
+                Raider Dibs
+              </Text>
+              {rows.length > 0 && (
+                <Text size="xs" c="dimmed">
+                  {withDibs} of {rows.length} have dibs left
+                </Text>
+              )}
+            </Group>
+          }
+        />
+      </UnstyledButton>
+      {open &&
+        (rows.length === 0 ? (
+          <Text size="sm" c="dimmed" mb="sm" pl="sm">
+            Raiders appear here once they join a session this season.
+          </Text>
+        ) : (
+          <Table verticalSpacing={4} withRowBorders={false} mb="sm" w="auto" pl="sm">
+            <Table.Tbody>
+              {rows.map((r) => {
+                const used = r.dibs_remaining === 0;
+                return (
+                  <Table.Tr key={r.id}>
+                    <Table.Td c={used ? 'dimmed' : undefined}>{r.username}</Table.Td>
+                    <Table.Td>
+                      {used ? (
+                        <Badge size="xs" variant="outline" color="gray">
+                          used
+                        </Badge>
+                      ) : (
+                        <Badge size="xs" variant="light" color="grape">
+                          {r.dibs_remaining} left
+                        </Badge>
+                      )}
+                    </Table.Td>
+                    <Table.Td>
+                      <ChargeInput value={r.dibs_remaining} limit={season.dibs_per_season} onChange={(v) => setDibs(r.id, v)} />
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
+          </Table>
+        ))}
     </>
   );
 }

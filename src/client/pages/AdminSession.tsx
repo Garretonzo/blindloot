@@ -73,10 +73,10 @@ export function AdminSessionPage() {
   const [picks, setPicks] = useState<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number } | null>(null);
   const [plans, setPlans] = useState<Record<number, PlanPreview[]>>({});
   const [summary, setSummary] = useState<SummaryItem[]>([]);
-  const { state: live, connected, send } = useSessionSocket(sessionId, null);
+  const { state: live, connected, send } = useSessionSocket(sessionId, null, null, true);
 
   const refresh = useCallback(() => {
-    api.session(sessionId).then(setDetail).catch(() => setDetail(null));
+    api.admin.session(sessionId).then(setDetail).catch(() => setDetail(null));
     api.admin.rolls(sessionId).then(setRolls).catch(() => {});
     api.admin.plansSummary(sessionId).then(setPicks).catch(() => {});
     api.admin.plans(sessionId).then(setPlans).catch(() => {});
