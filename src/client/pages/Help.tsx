@@ -123,13 +123,6 @@ export function HelpPage() {
 
       <SectionCard title="FAQ" collapsible>
         <Accordion variant="separated">
-          <Accordion.Item value="tie">
-            <Accordion.Control>How are ties decided?</Accordion.Control>
-            <Accordion.Panel>
-              Everyone who rolled gets a 1–100 roll; within the highest type present, the highest roll wins. Multiple Dibs: higher item level
-              wins, and only an exact tie goes to the dice.
-            </Accordion.Panel>
-          </Accordion.Item>
           {/* <Accordion.Item value="change">
             <Accordion.Control>Can I change my roll during the countdown?</Accordion.Control>
             <Accordion.Panel>Yes. Click another type, or click the selected one again to withdraw. Only what's selected at zero counts.</Accordion.Panel>
@@ -137,14 +130,18 @@ export function HelpPage() {
           <Accordion.Item value="planned">
             <Accordion.Control>I pre-picked Need on two items. What if I win one?</Accordion.Control>
             <Accordion.Panel>
-              Once you're out of Need charges, the others drop a step automatically (Dibs → Need, Need → Equip, etc.) You can't roll with
+              Once you're out of Need charges, the others drop automatically (Dibs → Equip, Need → Equip.) You can't roll with
               something you no longer have. And since the item roll-off order is pseudo-random, you don't get to choose which one goes first. If one matters
               more, maybe pick Need on that one only. The risk is yours.
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="alone">
             <Accordion.Control>What if nobody else used a Need or Dibs on the item I used mine on?</Accordion.Control>
-            <Accordion.Panel>You'll never know. And you will spend that roll regardless.</Accordion.Panel>
+            <Accordion.Panel>
+              You'll never know. Remember, a charge is only spent when you <b>win</b>. If nobody outrolled you, that item is yours,
+              and the charge is spent fair and square. Uncontested doesn't mean free. Roll what the item is worth to you, not what you
+              guess everyone else will do.
+            </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="order">
             <Accordion.Control>What order are items rolled in?</Accordion.Control>
@@ -165,7 +162,7 @@ export function HelpPage() {
           <Accordion.Item value="tab">
             <Accordion.Control>I closed the tab / my internet hiccuped.</Accordion.Control>
             <Accordion.Panel>
-              You stay logged in — reload and you're right back in. Loot, Need and Dibs are all on the server; nothing is lost.
+              Reload and you're right back in. Loot, Need and Dibs are all on the server; nothing is lost.
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="devices">
