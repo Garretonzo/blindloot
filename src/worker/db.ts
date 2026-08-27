@@ -33,6 +33,7 @@ export async function getSessionDetail(db: D1Database, sessionId: number): Promi
 interface RaiderRow {
   id: number;
   username: string;
+  avatar: string | null;
   item_level: number;
   dibs_remaining: number;
   need_remaining: number;
@@ -43,7 +44,7 @@ interface RaiderRow {
 export async function getSessionRaiders(db: D1Database, sessionId: number): Promise<Raider[]> {
   const rows = await db
     .prepare(
-      `SELECT r.id, r.username, ssr.item_level, sr.dibs_remaining, ssr.need_remaining,
+      `SELECT r.id, r.username, r.avatar, ssr.item_level, sr.dibs_remaining, ssr.need_remaining,
               se.dibs_per_season, se.need_per_session
        FROM session_raiders ssr
        JOIN raiders r ON r.id = ssr.raider_id
@@ -58,6 +59,7 @@ export async function getSessionRaiders(db: D1Database, sessionId: number): Prom
   return rows.results.map((r) => ({
     id: r.id,
     username: r.username,
+    avatar: r.avatar,
     item_level: r.item_level,
     dibs_remaining: r.dibs_remaining,
     need_remaining: r.need_remaining,

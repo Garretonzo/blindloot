@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import { Env } from '../env';
+import { AppEnv } from '../env';
 import { getSessionDetail, getSessionRaiders, getWinnerPickedTiers, joinSession, LAST_ILVL_SQL } from '../db';
 import { hashPassword, hasSiteAccess, isAdmin, requireSite, setSiteCookie, siteGateEnabled, verifyPassword } from '../auth';
-import { checkLogin, notifySession, presenceStub, sessionStub } from '../session';
+import { checkLogin, createLogin, deleteLogin, notifySession, presenceStub, raiderForToken, sessionStub } from '../session';
 import { canDibs, Tier, TIER_RANK } from '../../shared/types';
 
-export const publicRoutes = new Hono<{ Bindings: Env }>();
+export const publicRoutes = new Hono<AppEnv>();
 
 // ---- site gate (before everything else) ----
 publicRoutes.get('/site/me', async (c) => c.json({ ok: await hasSiteAccess(c), gated: siteGateEnabled(c.env) }));
@@ -20,6 +20,14 @@ publicRoutes.post('/site/login', async (c) => {
 
 publicRoutes.use('*', requireSite);
 
+// Identity comes from the login token, never from a client-supplied raiderId. The SPA sends the
+// token as a header; `?token=` covers WebSocket upgrades (browsers can't set headers there).
+publicRoutes.use('*', async (c, next) => {
+  const token = c.req.header('x-loot-token') || c.req.query('token') || '';
+  c.set('authedRaiderId', token ? await raiderForToken(c.env, token) : null);
+  await next();
+});
+
 publicRoutes.get('/seasons', async (c) => {
   const seasons = await c.env.DB.prepare('SELECT * FROM seasons ORDER BY created_at DESC').all();
   const sessions = await c.env.DB.prepare('SELECT * FROM sessions ORDER BY created_at DESC').all();
@@ -33,7 +41,7 @@ publicRoutes.get('/sessions/:id', async (c) => {
 
   // Raiders see who won (not how) and everyone's item level, but only their own Need / Dibs
   // state — and on items they won themselves, the winning tier plus their own pre-pick.
-  const meId = Number(c.req.query('raiderId')) || null;
+  const meId = c.get('authedRaiderId');
   const myPicked = meId ? await getWinnerPickedTiers(c.env.DB, detail.session.id, meId) : {};
   return c.json({
     ...detail,
@@ -44,15 +52,21 @@ publicRoutes.get('/sessions/:id', async (c) => {
         return { ...i, win_tier: mine ? i.win_tier : null, my_picked_tier: mine ? myPicked[i.id] ?? null : null };
       }),
     })),
-    raiders: detail.raiders.map((r) => (r.id === meId ? r : { ...r, dibs_remaining: 0, need_remaining: 0 })),
+    // Others' charge state is omitted entirely, not zeroed — it never leaves the server.
+    raiders: detail.raiders.map((r) => {
+      if (r.id === meId) return r;
+      const { dibs_remaining: _d, need_remaining: _n, ...rest } = r;
+      return rest;
+    }),
   });
 });
 
 // ---- pre-planned rolls ----
 publicRoutes.get('/sessions/:id/plans', async (c) => {
   const sessionId = Number(c.req.param('id'));
-  const raiderId = Number(c.req.query('raiderId'));
-  if (!raiderId) return c.json({});
+  // Only your own pre-picks, ever — identity comes from the token, not a query param.
+  const raiderId = c.get('authedRaiderId');
+  if (!raiderId) return c.json({ error: 'not logged in' }, 401);
   const rows = await c.env.DB.prepare('SELECT item_id, tier FROM plans WHERE session_id = ? AND raider_id = ?')
     .bind(sessionId, raiderId)
     .all<{ item_id: number; tier: Tier }>();
@@ -63,11 +77,12 @@ publicRoutes.get('/sessions/:id/plans', async (c) => {
 
 publicRoutes.put('/sessions/:id/plans', async (c) => {
   const sessionId = Number(c.req.param('id'));
-  const body = await c.req.json<{ raiderId?: number; token?: string; itemId?: number; tier?: Tier | null }>();
-  const raiderId = Number(body.raiderId);
+  const body = await c.req.json<{ token?: string; itemId?: number; tier?: Tier | null }>();
   const itemId = Number(body.itemId);
-  if (!raiderId || !itemId) return c.json({ error: 'raiderId and itemId required' }, 400);
-  if (!(await checkLogin(c.env, raiderId, body.token ?? ''))) return c.json({ error: 'not logged in' }, 401);
+  // Identity from the token (header via middleware, or body for older bundles) — never a bare raiderId.
+  const raiderId = c.get('authedRaiderId') ?? (body.token ? await raiderForToken(c.env, body.token) : null);
+  if (!raiderId) return c.json({ error: 'not logged in' }, 401);
+  if (!itemId) return c.json({ error: 'itemId required' }, 400);
   const tier = body.tier ?? null;
   if (tier && !(tier in TIER_RANK)) return c.json({ error: 'bad tier' }, 400);
 
@@ -104,9 +119,23 @@ publicRoutes.put('/sessions/:id/plans', async (c) => {
 // ---- login: pick a roster name; presence tracks who is logged in ----
 publicRoutes.get('/raiders', async (c) => {
   const rows = await c.env.DB.prepare(
-    'SELECT id, username, (password_hash IS NOT NULL) AS has_password FROM raiders ORDER BY username COLLATE NOCASE',
+    'SELECT id, username, avatar, (password_hash IS NOT NULL) AS has_password FROM raiders ORDER BY username COLLATE NOCASE',
   ).all();
   return c.json(rows.results);
+});
+
+/** Set (or clear, with null) the logged-in raider's avatar: a tiny client-resized data URL. */
+const AVATAR_RE = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/]+=*$/;
+const MAX_AVATAR_CHARS = 65536;
+publicRoutes.put('/raiders/me/avatar', async (c) => {
+  const raiderId = c.get('authedRaiderId');
+  if (!raiderId) return c.json({ error: 'not logged in' }, 401);
+  const { avatar } = await c.req.json<{ avatar?: string | null }>();
+  if (avatar != null && (typeof avatar !== 'string' || avatar.length > MAX_AVATAR_CHARS || !AVATAR_RE.test(avatar))) {
+    return c.json({ error: 'bad avatar' }, 400);
+  }
+  await c.env.DB.prepare('UPDATE raiders SET avatar = ? WHERE id = ?').bind(avatar ?? null, raiderId).run();
+  return c.json({ ok: true });
 });
 
 publicRoutes.get('/presence', async (c) => {
@@ -123,9 +152,8 @@ publicRoutes.post('/login', async (c) => {
     .first<{ id: number; username: string; password_hash: string | null }>();
   if (!raider) return c.json({ error: 'raider not found' }, 404);
 
-  // Password checks happen HERE, in front of the presence DO: the DO happily mints a fresh
-  // token once a login goes inactive, so the route is the gate. A presented token that still
-  // matches an active login skips the password (the client's silent re-login / "heal" path).
+  // A presented token that still resolves to this raider skips the password
+  // (the client's silent re-login / "heal" path) and hands the same token back.
   const healing = !!token && (await checkLogin(c.env, raider.id, token));
   if (!healing) {
     let hash = raider.password_hash;
@@ -148,11 +176,10 @@ publicRoutes.post('/login', async (c) => {
     }
   }
 
-  const res = await presenceStub(c.env).fetch('https://do/login', {
-    method: 'POST',
-    body: JSON.stringify({ raiderId: raider.id, username: raider.username, token: token || undefined }),
-  });
-  return c.json(await res.json(), res.status as 200);
+  // Durable multi-device logins: each successful password login mints its own token,
+  // valid until logout or an admin ends it. No "already logged in" conflicts.
+  const issued = healing ? token! : await createLogin(c.env, raider.id);
+  return c.json({ raiderId: raider.id, username: raider.username, token: issued });
 });
 
 publicRoutes.get('/login/check', async (c) => {
@@ -162,18 +189,21 @@ publicRoutes.get('/login/check', async (c) => {
 
 publicRoutes.post('/logout', async (c) => {
   const { raiderId, token } = await c.req.json<{ raiderId?: number; token?: string }>();
-  await presenceStub(c.env).fetch(`https://do/logout?raiderId=${Number(raiderId)}&token=${encodeURIComponent(token ?? '')}`, { method: 'POST' });
+  const t = c.req.header('x-loot-token') || token || '';
+  await deleteLogin(c.env, t);
+  // Close this device's presence socket so online badges update promptly.
+  await presenceStub(c.env).fetch(`https://do/logout?raiderId=${Number(raiderId)}&token=${encodeURIComponent(t)}`, { method: 'POST' });
   return c.json({ ok: true });
 });
 
 publicRoutes.get('/presence/ws', async (c) => {
   if (c.req.header('Upgrade') !== 'websocket') return c.text('expected websocket', 426);
-  const url = new URL(c.req.url);
   const target = new URL('https://do/ws');
-  for (const k of ['raiderId', 'token']) {
-    const v = url.searchParams.get(k);
-    if (v) target.searchParams.set(k, v);
-  }
+  // The route validates the token against D1; the DO just trusts the resolved raider id.
+  const raiderId = c.get('authedRaiderId');
+  if (raiderId) target.searchParams.set('raiderId', String(raiderId));
+  const token = c.req.query('token');
+  if (token) target.searchParams.set('token', token);
   const headers = new Headers(c.req.raw.headers);
   headers.set('X-Admin', (await isAdmin(c)) ? '1' : '0');
   return presenceStub(c.env).fetch(new Request(target, { headers }));
@@ -182,6 +212,7 @@ publicRoutes.get('/presence/ws', async (c) => {
 /** A raider's per-season record: remaining Dibs charges and their most recent item level in that season. */
 publicRoutes.get('/raiders/:id/seasons', async (c) => {
   const raiderId = Number(c.req.param('id'));
+  if (c.get('authedRaiderId') !== raiderId && !(await isAdmin(c))) return c.json({ error: 'not logged in' }, 401);
   const rows = await c.env.DB.prepare(
     `SELECT sr.season_id, sr.dibs_remaining, ${LAST_ILVL_SQL.replace('ssr.raider_id = ?', 'ssr.raider_id = sr.raider_id').replace('s.season_id = ?', 's.season_id = sr.season_id')} AS last_item_level
      FROM season_raiders sr WHERE sr.raider_id = ?`,
@@ -194,7 +225,7 @@ publicRoutes.get('/raiders/:id/seasons', async (c) => {
 /** Everything a raider has ever won, across all seasons, newest first. Their own tiers are theirs to see. */
 publicRoutes.get('/raiders/:id/wins', async (c) => {
   const raiderId = Number(c.req.param('id'));
-  if (!(await checkLogin(c.env, raiderId, c.req.query('token') ?? ''))) return c.json({ error: 'not logged in' }, 401);
+  if (c.get('authedRaiderId') !== raiderId) return c.json({ error: 'not logged in' }, 401);
   const rows = await c.env.DB.prepare(
     `SELECT i.id AS item_id, i.name, i.icon, i.win_tier, i.resolved_at,
             b.name AS boss_name, b.icon AS boss_icon,
@@ -238,11 +269,10 @@ publicRoutes.get('/raiders/:id/wins', async (c) => {
 
 publicRoutes.post('/sessions/:id/join', async (c) => {
   const sessionId = Number(c.req.param('id'));
-  const body = await c.req.json<{ raiderId?: number; token?: string; itemLevel?: number }>();
-  const raiderId = Number(body.raiderId);
+  const body = await c.req.json<{ token?: string; itemLevel?: number }>();
   const itemLevel = Math.max(0, Math.floor(Number(body.itemLevel ?? 0)));
-  if (!raiderId) return c.json({ error: 'raiderId required' }, 400);
-  if (!(await checkLogin(c.env, raiderId, body.token ?? ''))) return c.json({ error: 'not logged in' }, 401);
+  const raiderId = c.get('authedRaiderId') ?? (body.token ? await raiderForToken(c.env, body.token) : null);
+  if (!raiderId) return c.json({ error: 'not logged in' }, 401);
 
   const session = await c.env.DB.prepare('SELECT * FROM sessions WHERE id = ?')
     .bind(sessionId)
@@ -259,17 +289,28 @@ publicRoutes.post('/sessions/:id/join', async (c) => {
   return c.json({ raiderId: raider.id, username: raider.username });
 });
 
+/** REST fallback for the "happy with my picks" toggle, for raiders whose session socket is down. */
+publicRoutes.post('/sessions/:id/lock-in', async (c) => {
+  const sessionId = Number(c.req.param('id'));
+  const body = await c.req.json<{ token?: string; value?: boolean }>();
+  const raiderId = c.get('authedRaiderId') ?? (body.token ? await raiderForToken(c.env, body.token) : null);
+  if (!raiderId) return c.json({ error: 'not logged in' }, 401);
+  await sessionStub(c.env, sessionId).fetch(
+    `https://do/lock-in?sessionId=${sessionId}&raiderId=${raiderId}&value=${body.value ? '1' : '0'}`,
+    { method: 'POST' },
+  );
+  return c.json({ ok: true });
+});
+
 publicRoutes.get('/sessions/:id/ws', async (c) => {
   if (c.req.header('Upgrade') !== 'websocket') return c.text('expected websocket', 426);
   const sessionId = Number(c.req.param('id'));
-  const url = new URL(c.req.url);
   const target = new URL('https://do/ws');
   target.searchParams.set('sessionId', String(sessionId));
-  const raiderId = url.searchParams.get('raiderId');
   // Only a logged-in raider gets a raider socket; otherwise they connect as a viewer.
-  if (raiderId && (await checkLogin(c.env, Number(raiderId), url.searchParams.get('token') ?? ''))) {
-    target.searchParams.set('raiderId', raiderId);
-  }
+  // Identity comes from the token alone (browsers can't set headers on WS upgrades).
+  const raiderId = c.get('authedRaiderId');
+  if (raiderId) target.searchParams.set('raiderId', String(raiderId));
 
   const headers = new Headers(c.req.raw.headers);
   headers.set('X-Admin', (await isAdmin(c)) ? '1' : '0');

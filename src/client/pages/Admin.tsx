@@ -1,6 +1,7 @@
 import { Anchor, Badge, Button, Group, NumberInput, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { RAIDS, raidById, raidLabel } from '../../shared/raids';
 import { SectionCard, SubHeader } from '../components/SectionCard';
+import { ChargeInput } from '../components/RaiderTable';
 import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
@@ -60,9 +61,11 @@ function RosterCard({ isSuper }: { isSuper: boolean }) {
   return (
     <SectionCard
       title="Raiders"
+      collapsible
+      defaultOpen={false}
       right={
         <Text size="xs" c="dimmed">
-          {roster.length} on roster · {online.size} logged in
+          {roster.length} on roster · {online.size} online
         </Text>
       }
     >
@@ -428,6 +431,46 @@ function SeasonLimits({ season, onSaved }: { season: Season; onSaved: () => void
   );
 }
 
+/** Per-raider season-level Dibs counts (Dibs charges are season-scoped, so they're edited here). */
+function SeasonRaiders({ season }: { season: Season }) {
+  const [rows, setRows] = useState<{ id: number; username: string; dibs_remaining: number }[] | null>(null);
+  const load = useCallback(() => {
+    api.admin.seasonRaiders(season.id).then(setRows).catch(() => {});
+  }, [season.id]);
+  useEffect(load, [load]);
+
+  const setDibs = (raiderId: number, dibs: number) =>
+    api.admin
+      .updateSeasonRaider(season.id, raiderId, dibs)
+      .then(load)
+      .catch((e: Error) => notifications.show({ color: 'red', message: e.message }));
+
+  if (!rows) return null;
+  return (
+    <>
+      <SubHeader>Raider Dibs</SubHeader>
+      {rows.length === 0 ? (
+        <Text size="sm" c="dimmed" mb="sm" pl="sm">
+          Raiders appear here once they join a session this season.
+        </Text>
+      ) : (
+        <Table verticalSpacing={4} withRowBorders={false} mb="sm" w="auto" pl="sm">
+          <Table.Tbody>
+            {rows.map((r) => (
+              <Table.Tr key={r.id}>
+                <Table.Td>{r.username}</Table.Td>
+                <Table.Td>
+                  <ChargeInput value={r.dibs_remaining} limit={season.dibs_per_season} onChange={(v) => setDibs(r.id, v)} />
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
+    </>
+  );
+}
+
 export function AdminHome() {
   const { ok, isSuper } = useRequireAdmin();
   const nav = useNavigate();
@@ -503,6 +546,10 @@ export function AdminHome() {
         </Button>
       </Group>
 
+      <RosterCard isSuper={isSuper} />
+
+      {isSuper && <BackupsCard />}
+
       <SectionCard title="New season">
         <Group align="flex-end">
           <TextInput
@@ -530,13 +577,12 @@ export function AdminHome() {
         </Group>
       </SectionCard>
 
-      <RosterCard isSuper={isSuper} />
-
-      {isSuper && <BackupsCard />}
-
       {data.seasons.map((season) => (
         <SectionCard
           key={season.id}
+          collapsible
+          // Open by default only while the season has a session that isn't closed.
+          defaultOpen={data.sessions.some((s) => s.season_id === season.id && s.status !== 'closed')}
           title={
             <Group gap="xs">
               <EditableName value={season.name} onSave={(n) => renameSeason(season.id, n)}>
@@ -561,6 +607,7 @@ export function AdminHome() {
           }
         >
           <SeasonLimits season={season} onSaved={refresh} />
+          <SeasonRaiders season={season} />
           <SubHeader>Sessions</SubHeader>
           <Stack gap={4} mb="sm" pl="sm">
             {data.sessions

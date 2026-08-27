@@ -109,6 +109,23 @@ domain already on the account), then **Workers & Pages → justfuckingroll → S
 Add → Custom domain**. Cloudflare creates the DNS record and certificate. Optionally disable the
 `workers.dev` route there so the domain is the only entrance.
 
+**Only the apex is a Worker custom domain.** `www` used to be a second custom domain, but its
+worker-domain certificate produced `ERR_SSL_PROTOCOL_ERROR` / `ERR_QUIC_PROTOCOL_ERROR` for some
+users. Instead, `www` redirects to the apex — set up once in the dashboard (zone
+`justfuckingroll.com`):
+
+1. **Workers & Pages → justfuckingroll → Settings → Domains & Routes**: make sure
+   `www.justfuckingroll.com` is **not** listed as a custom domain (remove it if it lingers after a
+   deploy).
+2. **DNS → Records**: add `CNAME www → justfuckingroll.com`, **Proxied** (orange cloud). This gives
+   `www` a working edge certificate via the zone's Universal SSL (covers apex + first-level names).
+3. **Rules → Redirect Rules → Create rule** ("www to apex"): When *Hostname equals
+   `www.justfuckingroll.com`* → Then *Dynamic redirect*, expression
+   `concat("https://justfuckingroll.com", http.request.uri.path)`, status **301**, and enable
+   **Preserve query string**.
+4. Verify: `curl -sI https://www.justfuckingroll.com/x?y=1` returns `301` with
+   `location: https://justfuckingroll.com/x?y=1`.
+
 ## Flow
 
 1. Admin (`/admin`) creates a Season — a name plus the **boss/loot pool** it uses (currently only

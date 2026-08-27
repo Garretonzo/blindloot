@@ -21,7 +21,9 @@ export function PrePickPreview({ bosses, raiders, plans, lockedIn, raidId }: Pro
   const unresolved = bosses.map((b) => ({ ...b, items: b.items.filter((i) => i.resolved_at == null) })).filter((b) => b.items.length > 0);
   if (unresolved.length === 0) return null;
   const allItems = unresolved.flatMap((b) => b.items);
-  const withPicks = new Set(Object.values(plans).flat().map((p) => p.raiderId));
+  // Pass picks are noise: hidden everywhere, and raiders with only passes count as having no picks.
+  const isRolled = (p: PlanPreview) => p.tier !== 'pass';
+  const withPicks = new Set(Object.values(plans).flat().filter(isRolled).map((p) => p.raiderId));
   const locked = new Set(lockedIn);
 
   const pick = (p: PlanPreview) => {
@@ -75,7 +77,7 @@ export function PrePickPreview({ bosses, raiders, plans, lockedIn, raidId }: Pro
               <SubHeader icon={b.icon}>{b.name}</SubHeader>
               <Stack gap={6} pl="sm">
                 {b.items.map((i) => {
-                  const ps = (plans[i.id] ?? []).slice().sort((a, c) => TIER_RANK[c.effectiveTier] - TIER_RANK[a.effectiveTier]);
+                  const ps = (plans[i.id] ?? []).filter(isRolled).sort((a, c) => TIER_RANK[c.effectiveTier] - TIER_RANK[a.effectiveTier]);
                   return (
                     <Group key={i.id} gap="sm" wrap="nowrap" align="flex-start">
                       <ItemTooltip raidId={raidId} name={i.name}>
@@ -105,9 +107,10 @@ export function PrePickPreview({ bosses, raiders, plans, lockedIn, raidId }: Pro
           <Table.Tbody>
             {raiders.map((r) => {
               const mine = allItems
-                .map((i) => ({ item: i, p: (plans[i.id] ?? []).find((p) => p.raiderId === r.id) }))
+                .map((i) => ({ item: i, p: (plans[i.id] ?? []).find((p) => p.raiderId === r.id && isRolled(p)) }))
                 .filter((x): x is { item: (typeof allItems)[number]; p: PlanPreview } => !!x.p)
                 .sort((a, b) => TIER_RANK[b.p.effectiveTier] - TIER_RANK[a.p.effectiveTier]);
+              if (mine.length === 0) return null; // nothing (or only passes) picked — no row
               return (
                 <Table.Tr key={r.id}>
                   <Table.Td w={160} style={{ verticalAlign: 'top' }}>
@@ -123,28 +126,22 @@ export function PrePickPreview({ bosses, raiders, plans, lockedIn, raidId }: Pro
                     </Group>
                   </Table.Td>
                   <Table.Td>
-                    {mine.length === 0 ? (
-                      <Text size="xs" c="red.4">
-                        no picks yet
-                      </Text>
-                    ) : (
-                      <Group gap="sm">
-                        {mine.map(({ item, p }) => (
-                          <Group key={item.id} gap={4} wrap="nowrap">
-                            <ItemTooltip raidId={raidId} name={item.name}>
-                              <Group gap={4} wrap="nowrap">
-                                <Icon src={item.icon} size={16} />
-                                <Text size="xs">{item.name}</Text>
-                              </Group>
-                            </ItemTooltip>
-                            <span style={p.effectiveTier !== p.tier ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}>
-                              <TierBadge tier={p.tier} />
-                            </span>
-                            {p.effectiveTier !== p.tier && <TierBadge tier={p.effectiveTier} />}
-                          </Group>
-                        ))}
-                      </Group>
-                    )}
+                    <Group gap="sm">
+                      {mine.map(({ item, p }) => (
+                        <Group key={item.id} gap={4} wrap="nowrap">
+                          <ItemTooltip raidId={raidId} name={item.name}>
+                            <Group gap={4} wrap="nowrap">
+                              <Icon src={item.icon} size={16} />
+                              <Text size="xs">{item.name}</Text>
+                            </Group>
+                          </ItemTooltip>
+                          <span style={p.effectiveTier !== p.tier ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}>
+                            <TierBadge tier={p.tier} />
+                          </span>
+                          {p.effectiveTier !== p.tier && <TierBadge tier={p.effectiveTier} />}
+                        </Group>
+                      ))}
+                    </Group>
                   </Table.Td>
                 </Table.Tr>
               );

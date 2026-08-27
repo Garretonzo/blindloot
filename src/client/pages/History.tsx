@@ -23,7 +23,7 @@ export function HistoryPage() {
     <Stack gap="lg">
       <Title order={3}>Season history</Title>
 
-      <SectionCard title="Raiders">
+      <SectionCard title="Raiders" collapsible>
         <Table verticalSpacing={2} withRowBorders={false}>
           <Table.Tbody>
             {data.raiders.map((r) => (
@@ -48,13 +48,15 @@ export function HistoryPage() {
       </SectionCard>
 
       {data.sessions.map((s) => (
-        <SectionCard key={s.id} title={s.name} right={<StatusBadge status={s.status} size="xs" />}>
+        <SectionCard key={s.id} title={s.name} collapsible right={<StatusBadge status={s.status} size="xs" />}>
           <Table verticalSpacing={2} withRowBorders={false}>
             <Table.Tbody>
               {data.items
                 .filter((i) => i.session_id === s.id)
                 .map((i) => {
-                  const rolls = data.rolls.filter((r) => r.item_id === i.item_id);
+                  // Passers are noise — only actual rolls are shown, and items nobody rolled on are skipped.
+                  const rolls = data.rolls.filter((r) => r.item_id === i.item_id && r.tier !== 'pass');
+                  if (!i.winner && rolls.length === 0) return null;
                   return (
                     <Table.Tr key={i.item_id}>
                       <Table.Td>

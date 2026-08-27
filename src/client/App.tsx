@@ -8,7 +8,8 @@ import { AdminHome } from './pages/Admin';
 import { AdminSessionPage } from './pages/AdminSession';
 import { HistoryPage } from './pages/History';
 import { HelpPage } from './pages/Help';
-import { IdentityProvider, NamePrompt, useIdentity } from './identity';
+import { IdentityProvider, NamePrompt, useIdentity, useMyAvatar } from './identity';
+import { RaiderAvatar } from './components/RaiderAvatar';
 import { SiteGate } from './SiteGate';
 
 export function App() {
@@ -32,6 +33,7 @@ export function App() {
 
 function Shell() {
   const { identity, logout } = useIdentity();
+  const myAvatar = useMyAvatar();
   const { pathname } = useLocation();
   const isAdminRoute = pathname.startsWith('/admin');
   const isHelp = pathname === '/help';
@@ -64,14 +66,17 @@ function Shell() {
             </Anchor>
             <Group gap="sm">
               {identity && (
-                <Text size="sm" c="dimmed">
-                  <Text span c="teal.3" fw={600}>
-                    {identity.username}
-                  </Text>{' '}
-                  <Anchor component="button" size="xs" c="dimmed" onClick={logout}>
-                    (log out)
-                  </Anchor>
-                </Text>
+                <Group gap={6} wrap="nowrap">
+                  <RaiderAvatar avatar={myAvatar} username={identity.username} size={24} />
+                  <Text size="sm" c="dimmed">
+                    <Text span c="teal.3" fw={600}>
+                      {identity.username}
+                    </Text>{' '}
+                    <Anchor component="button" size="xs" c="dimmed" onClick={logout}>
+                      (log out)
+                    </Anchor>
+                  </Text>
+                </Group>
               )}
               {isAdminRoute ? (
                 <Anchor component={Link} to="/admin" size="sm" c="dimmed" underline="never">

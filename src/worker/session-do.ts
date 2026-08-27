@@ -41,7 +41,6 @@ const initialState = (): LiveState => ({
   choiceCount: 0,
   lastResult: null,
   shuffle: true,
-  batchResults: null,
   lockedIn: [],
   revision: 0,
 });
@@ -56,6 +55,7 @@ export class SessionDO extends DurableObject<Env> {
     this.ready = ctx.blockConcurrencyWhile(async () => {
       // Merge over defaults so state persisted by older code gets new fields.
       this.state = { ...initialState(), ...((await ctx.storage.get<Partial<LiveState>>('state')) ?? {}) };
+      delete (this.state as unknown as Record<string, unknown>).batchResults; // removed field; drop it from old persisted state
       this.sessionId = (await ctx.storage.get<number>('sessionId')) ?? 0;
     });
   }
@@ -85,6 +85,18 @@ export class SessionDO extends DurableObject<Env> {
       // Data changed via REST; tell clients to refetch. Loot changes invalidate "happy with my picks".
       const lootChanged = url.searchParams.get('loot') === '1';
       await this.save({ revision: this.state.revision + 1, ...(lootChanged ? { lockedIn: [] } : {}) });
+      return new Response('ok');
+    }
+
+    if (url.pathname === '/lock-in') {
+      // REST fallback for the "happy with my picks" toggle (raider's session socket may be down).
+      const raiderId = Number(url.searchParams.get('raiderId'));
+      if (raiderId) {
+        const set = new Set(this.state.lockedIn);
+        if (url.searchParams.get('value') === '1') set.add(raiderId);
+        else set.delete(raiderId);
+        await this.save({ lockedIn: [...set] });
+      }
       return new Response('ok');
     }
 
@@ -289,7 +301,6 @@ export class SessionDO extends DurableObject<Env> {
       choices,
       choiceCount: Object.keys(choices).length,
       lastResult: null,
-      batchResults: null,
       revision: this.state.revision + 1,
       // First item waits for the admin to press "Start countdown".
       ...(await this.pausedTimer(this.itemMs())),
@@ -303,16 +314,16 @@ export class SessionDO extends DurableObject<Env> {
   private async runBatch() {
     if (this.state.phase !== 'open') throw new Error('Finish or reset the live roll-off first');
     if ((await getPendingItemIds(this.env.DB, this.sessionId)).length === 0) throw new Error('No unrolled items');
-    const results: ItemResult[] = [];
     // Pick the next item fresh each round: earlier wins demote pre-picks, which reshuffles the
-    // priority order. Terminates because every resolution sets resolved_at.
+    // priority order. Terminates because every resolution sets resolved_at. Results land in D1;
+    // the revision bump makes clients refetch and see them on the Loot / Raiders cards.
     for (;;) {
       const itemId = (await this.orderedPending())[0];
       if (itemId == null) break;
       const choices = await this.prefilledChoices(itemId);
-      results.push(await this.resolveOne(itemId, choices, 'batch'));
+      await this.resolveOne(itemId, choices, 'batch');
     }
-    await this.save({ batchResults: results, lastResult: null, lockedIn: [], revision: this.state.revision + 1 });
+    await this.save({ lastResult: null, lockedIn: [], revision: this.state.revision + 1 });
   }
 
   private itemMs() {
@@ -468,7 +479,6 @@ export class SessionDO extends DurableObject<Env> {
       itemSeconds: this.state.itemSeconds,
       resultSeconds: this.state.resultSeconds,
       shuffle: this.state.shuffle,
-      batchResults: this.state.batchResults,
       revision: this.state.revision + 1,
     });
   }
@@ -508,16 +518,18 @@ export class SessionDO extends DurableObject<Env> {
       return {
         ...r,
         winTier: mine ? r.winTier : null,
-        entries: r.entries.map(({ tier, pickedTier, itemLevel: _ilvl, ...rest }) =>
-          mine && rest.raiderId === att.raiderId ? { ...rest, tier, pickedTier, itemLevel: 0 } : { ...rest, itemLevel: 0 },
-        ),
+        entries: r.entries
+          // Passers are noise: raiders never see them (their tier would be stripped anyway).
+          .filter((e) => e.tier !== 'pass')
+          .map(({ tier, pickedTier, itemLevel: _ilvl, ...rest }) =>
+            mine && rest.raiderId === att.raiderId ? { ...rest, tier, pickedTier, itemLevel: 0 } : { ...rest, itemLevel: 0 },
+          ),
       };
     };
     return {
       ...s,
       choices: own,
       lastResult: s.lastResult ? blind(s.lastResult) : null,
-      batchResults: s.batchResults ? s.batchResults.map(blind) : null,
     };
   }
 

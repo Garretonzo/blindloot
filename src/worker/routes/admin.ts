@@ -1,7 +1,7 @@
-import { Hono } from 'hono';
-import { Env } from '../env';
+﻿import { Hono } from 'hono';
+import { AppEnv, Env } from '../env';
 import { clearAdminCookie, getRole, requireAdmin, requireSuper, roleForPassword, setAdminCookie } from '../auth';
-import { clearSession, notifySession, presenceStub, resetSessionLive, sessionStub } from '../session';
+import { clearSession, deleteRaiderLogins, notifySession, presenceStub, resetSessionLive, sessionStub } from '../session';
 import {
   BackupKind,
   deleteBackup,
@@ -29,7 +29,7 @@ import {
 import { demoteTier, SummaryItem, Tier } from '../../shared/types';
 import { raidById } from '../../shared/raids';
 
-export const adminRoutes = new Hono<{ Bindings: Env }>();
+export const adminRoutes = new Hono<AppEnv>();
 
 adminRoutes.post('/login', async (c) => {
   const { password } = await c.req.json<{ password?: string }>();
@@ -115,11 +115,15 @@ async function performRestore(env: Env, snap: Snapshot, kind: Exclude<BackupKind
 
   if (kind === 'pre-import') {
     // Foreign snapshot: raider ids may now mean different people, so end every login.
+    await db.prepare('DELETE FROM logins').run();
     await presenceStub(env).fetch('https://do/end-all', { method: 'POST' });
   } else {
     const postRaiders = new Set(snap.tables.raiders.map((r) => Number(r.id)));
     for (const r of preRaiders.results) {
-      if (!postRaiders.has(r.id)) await presenceStub(env).fetch(`https://do/end?raiderId=${r.id}`, { method: 'POST' });
+      if (!postRaiders.has(r.id)) {
+        await deleteRaiderLogins(env, r.id);
+        await presenceStub(env).fetch(`https://do/end?raiderId=${r.id}`, { method: 'POST' });
+      }
     }
   }
   return preBackup;
@@ -235,6 +239,37 @@ adminRoutes.patch('/sessions/:id', async (c) => {
   if (!name?.trim()) return c.json({ error: 'name required' }, 400);
   await c.env.DB.prepare('UPDATE sessions SET name = ? WHERE id = ?').bind(name.trim(), sessionId).run();
   await notifySession(c.env, sessionId);
+  return c.json({ ok: true });
+});
+
+/** Raiders who have raided this season, with their remaining season-level Dibs. */
+adminRoutes.get('/seasons/:id/raiders', async (c) => {
+  const seasonId = Number(c.req.param('id'));
+  const rows = await c.env.DB.prepare(
+    `SELECT sr.raider_id AS id, r.username, sr.dibs_remaining
+     FROM season_raiders sr JOIN raiders r ON r.id = sr.raider_id
+     WHERE sr.season_id = ? ORDER BY r.username COLLATE NOCASE`,
+  )
+    .bind(seasonId)
+    .all<{ id: number; username: string; dibs_remaining: number }>();
+  return c.json(rows.results);
+});
+
+/** Season-level per-raider Dibs override (Dibs charges are season-scoped). */
+adminRoutes.patch('/seasons/:id/raiders/:raiderId', async (c) => {
+  const seasonId = Number(c.req.param('id'));
+  const raiderId = Number(c.req.param('raiderId'));
+  const body = await c.req.json<{ dibsRemaining?: number }>();
+  const dibsRemaining = parseLimit(body.dibsRemaining);
+  if (dibsRemaining == null) return c.json({ error: 'dibsRemaining required' }, 400);
+  await c.env.DB.prepare('UPDATE season_raiders SET dibs_remaining = ? WHERE season_id = ? AND raider_id = ?')
+    .bind(dibsRemaining, seasonId, raiderId)
+    .run();
+  // Let any live session pages in this season pick up the new count.
+  const sessions = await c.env.DB.prepare("SELECT id FROM sessions WHERE season_id = ? AND status != 'closed'")
+    .bind(seasonId)
+    .all<{ id: number }>();
+  for (const s of sessions.results) await notifySession(c.env, s.id);
   return c.json({ ok: true });
 });
 
@@ -413,7 +448,7 @@ adminRoutes.get('/sessions/:id/plans', async (c) => {
   return c.json(out);
 });
 
-/** Who has pre-picked how many unresolved items — shown before running an instant batch. */
+/** Who has pre-picked how many unresolved items â€” shown before running an instant batch. */
 adminRoutes.get('/sessions/:id/plans-summary', async (c) => {
   const sessionId = Number(c.req.param('id'));
   const db = c.env.DB;
@@ -524,7 +559,11 @@ adminRoutes.get('/raiders', async (c) => {
 
 /** Reset a raider to passwordless (lockout recovery); their next login prompts them to set a new one. */
 adminRoutes.delete('/raiders/:id/password', requireSuper, async (c) => {
-  await c.env.DB.prepare('UPDATE raiders SET password_hash = NULL WHERE id = ?').bind(Number(c.req.param('id'))).run();
+  const id = Number(c.req.param('id'));
+  await c.env.DB.prepare('UPDATE raiders SET password_hash = NULL WHERE id = ?').bind(id).run();
+  // Their existing logins die with the old password.
+  await deleteRaiderLogins(c.env, id);
+  await presenceStub(c.env).fetch(`https://do/end?raiderId=${id}`, { method: 'POST' });
   return c.json({ ok: true });
 });
 
@@ -540,8 +579,13 @@ adminRoutes.post('/raiders', async (c) => {
 
 adminRoutes.patch('/raiders/:id', async (c) => {
   const id = Number(c.req.param('id'));
-  const { username: raw } = await c.req.json<{ username?: string }>();
-  const username = (raw ?? '').trim();
+  const body = await c.req.json<{ username?: string; avatar?: null }>();
+  // Moderation hatch: an admin can clear (never set) a raider's avatar.
+  if (body.avatar === null) {
+    await c.env.DB.prepare('UPDATE raiders SET avatar = NULL WHERE id = ?').bind(id).run();
+    if (body.username === undefined) return c.json({ ok: true });
+  }
+  const username = (body.username ?? '').trim();
   if (!username || username.length > 32) return c.json({ error: 'invalid username' }, 400);
   try {
     await c.env.DB.prepare('UPDATE raiders SET username = ? WHERE id = ?').bind(username, id).run();
@@ -551,9 +595,11 @@ adminRoutes.patch('/raiders/:id', async (c) => {
   return c.json({ ok: true });
 });
 
-/** End a raider's login; their browser is bounced back to the name picker. */
+/** End a raider's logins (all devices); their browsers are bounced back to the name picker. */
 adminRoutes.delete('/logins/:raiderId', async (c) => {
-  await presenceStub(c.env).fetch(`https://do/end?raiderId=${Number(c.req.param('raiderId'))}`, { method: 'POST' });
+  const raiderId = Number(c.req.param('raiderId'));
+  await deleteRaiderLogins(c.env, raiderId);
+  await presenceStub(c.env).fetch(`https://do/end?raiderId=${raiderId}`, { method: 'POST' });
   return c.json({ ok: true });
 });
 
@@ -566,10 +612,12 @@ adminRoutes.delete('/raiders/:id', requireSuper, async (c) => {
     .first<{ n: number }>();
   if ((used?.n ?? 0) > 0) return c.json({ error: 'raider has session history; remove them from sessions first' }, 409);
   await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM logins WHERE raider_id = ?').bind(id),
     c.env.DB.prepare('DELETE FROM season_raiders WHERE raider_id = ?').bind(id),
     c.env.DB.prepare('DELETE FROM plans WHERE raider_id = ?').bind(id),
     c.env.DB.prepare('DELETE FROM raiders WHERE id = ?').bind(id),
   ]);
+  await presenceStub(c.env).fetch(`https://do/end?raiderId=${id}`, { method: 'POST' });
   return c.json({ ok: true });
 });
 

@@ -5,9 +5,11 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
 # Custom domain is attached on deploy (DNS + certificate handled by Cloudflare).
+# www is deliberately NOT a custom domain: its worker-domain cert caused
+# ERR_SSL_PROTOCOL_ERROR / ERR_QUIC_PROTOCOL_ERROR for some users. Instead, a
+# proxied DNS record + dashboard Redirect Rule sends www -> apex (see README).
 routes = [
   { pattern = "justfuckingroll.com", custom_domain = true },
-  { pattern = "www.justfuckingroll.com", custom_domain = true },
 ]
 
 [assets]

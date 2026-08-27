@@ -50,7 +50,7 @@ export function HelpPage() {
         </Text>
       </SectionCard> */}
 
-      <SectionCard title="Roll types">
+      <SectionCard title="Roll types" collapsible>
         <Text size="sm" c="dimmed" mb="sm">
           Pick one per item. Highest type present wins; ties within a type are a 1–100 roll.
         </Text>
@@ -70,7 +70,7 @@ export function HelpPage() {
         </Table>
       </SectionCard>
 
-      <SectionCard title="The one rule to remember">
+      <SectionCard title="The one rule to remember" collapsible>
         <Alert variant="light" color="orange">
           You get a limited number of <b>Need wins</b> per week (per difficulty) and <b>Dibs</b> per season. Usually one each, the raid
           leader sets it, and the session page shows the numbers. 
@@ -82,7 +82,7 @@ export function HelpPage() {
         </Text>
       </SectionCard>
 
-      <SectionCard title="Raid night, step by step">
+      <SectionCard title="Raid night, step by step" collapsible>
         <List type="ordered" size="sm" spacing="xs">
           <List.Item>
             <b>Boss dies. Everyone passes on everything.</b> The loot officer picks it all up. Nothing gets rolled in the game client.
@@ -105,7 +105,7 @@ export function HelpPage() {
             a spare moment, but the expectation is: kill things now, roll later.
           </List.Item>
           <List.Item>
-            Happy with your picks? Flip the <b>YES</b> switch under the Loot card so the officer knows. It resets whenever loot is added.
+            Happy with your picks? Flip the <b>YES</b> switch in the bar pinned to the bottom of the session page so the officer knows. It resets whenever loot is added.
             When loot's done, the loot officer <b>runs the batch</b>: the site resolves every item from everyone's picks in one go and posts the results. <b>Items are resolved in a
             pseudo-random order</b>, so "first on the list" means nothing: if you pre-pick Need on three items, any of them could be the one that
             spends it. The risk is yours.
@@ -121,7 +121,7 @@ export function HelpPage() {
         </List>
       </SectionCard>
 
-      <SectionCard title="FAQ">
+      <SectionCard title="FAQ" collapsible>
         <Accordion variant="separated">
           <Accordion.Item value="tie">
             <Accordion.Control>How are ties decided?</Accordion.Control>
@@ -165,14 +165,14 @@ export function HelpPage() {
           <Accordion.Item value="tab">
             <Accordion.Control>I closed the tab / my internet hiccuped.</Accordion.Control>
             <Accordion.Panel>
-              Your login is held for about 30 seconds, so a reload is fine. After that your name frees up and you just pick it again. Loot,
-              Need and Dibs are all on the server; nothing is lost.
+              You stay logged in — reload and you're right back in. Loot, Need and Dibs are all on the server; nothing is lost.
             </Accordion.Panel>
           </Accordion.Item>
-          <Accordion.Item value="grey">
-            <Accordion.Control>My name is greyed out in the picker.</Accordion.Control>
+          <Accordion.Item value="devices">
+            <Accordion.Control>Can I be logged in on my phone and my PC?</Accordion.Control>
             <Accordion.Panel>
-              You're logged in somewhere else (another tab or device). Close that one and wait ~30 seconds, or ask the loot officer to end it.
+              Yes. Log in with your password on each device and you stay logged in on both until you log out (or the loot officer ends your
+              login). Forgot your password? The loot officer can reset it.
             </Accordion.Panel>
           </Accordion.Item>
           <Accordion.Item value="see">

@@ -4,6 +4,7 @@ import { SectionCard } from '../components/SectionCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/ItemList';
 import { MyLoot } from '../components/MyLoot';
+import { ProfileCard } from '../components/ProfileCard';
 import { useIdentity } from '../identity';
 import { raidById } from '../../shared/raids';
 import { useEffect, useState } from 'react';
@@ -45,10 +46,11 @@ export function Home() {
   };
 
   if (!data) return null;
-  if (data.seasons.length === 0) return <EmptyState icon={<IconMoodEmpty size={26} />} text="No seasons yet. The loot officer is asleep." />;
 
   return (
     <Stack gap="lg">
+      {identity && <ProfileCard />}
+      {data.seasons.length === 0 && <EmptyState icon={<IconMoodEmpty size={26} />} text="No seasons yet. The loot officer is asleep." />}
       {data.seasons.map((season) => {
         const raid = raidById(season.raid_id);
         const sessions = data.sessions.filter((s) => s.season_id === season.id);
@@ -56,6 +58,7 @@ export function Home() {
           <SectionCard
             key={season.id}
             title={season.name}
+            collapsible
             right={
               <Group gap="xs">
                 {raid && (

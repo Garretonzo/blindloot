@@ -236,7 +236,8 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
         {res && res.entries.length > 0 && (
           <Table verticalSpacing={2} withRowBorders={false}>
             <Table.Tbody>
-              {[...res.entries]
+              {res.entries
+                .filter((e) => e.tier !== 'pass')
                 .sort((a, b) => Number(b.won) - Number(a.won))
                 .map((e) => (
                   <Table.Tr key={e.raiderId}>

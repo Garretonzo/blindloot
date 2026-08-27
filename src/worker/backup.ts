@@ -20,7 +20,7 @@ export type BackupKind = 'manual' | 'pre-restore' | 'pre-import';
 /** Column lists per table: the single source of truth for snapshot SELECTs, restore INSERTs and import validation. */
 export const TABLE_COLUMNS = {
   seasons: ['id', 'name', 'raid_id', 'created_at', 'dibs_per_season', 'need_per_session'],
-  raiders: ['id', 'username', 'created_at', 'password_hash'],
+  raiders: ['id', 'username', 'created_at', 'password_hash', 'avatar'],
   sessions: ['id', 'season_id', 'name', 'status', 'created_at'],
   bosses: ['id', 'session_id', 'name', 'icon', 'sort_order'],
   items: ['id', 'boss_id', 'name', 'icon', 'sort_order', 'winner_raider_id', 'win_tier', 'resolved_at', 'resolved_mode'],
@@ -31,6 +31,11 @@ export const TABLE_COLUMNS = {
 } as const;
 
 export type TableName = keyof typeof TABLE_COLUMNS;
+
+/** Columns added after older backups were taken: may be absent from snapshot rows (restored as NULL). */
+export const OPTIONAL_COLUMNS: { [T in TableName]?: readonly string[] } = {
+  raiders: ['avatar'],
+};
 
 /** Parents before children, so inserts satisfy D1's (always-on) foreign key enforcement. */
 export const INSERT_ORDER: TableName[] = [
@@ -168,8 +173,9 @@ export async function loadBackup(db: D1Database, id: number): Promise<Snapshot |
 
 /**
  * Strict shape check for anything that will be restored — especially uploaded files.
- * Every row must contain exactly the known columns with string/number/null values
- * (integers where an id/count is expected), because restore inlines them into SQL.
+ * Every row must contain only known columns with string/number/null values (integers
+ * where an id/count is expected), because restore inlines them into SQL. Columns listed
+ * in OPTIONAL_COLUMNS may be absent (older backups predate them; they restore as NULL).
  */
 export function validateSnapshot(x: unknown): asserts x is Snapshot {
   if (typeof x !== 'object' || x === null) throw new Error('not a backup file');
@@ -183,12 +189,17 @@ export function validateSnapshot(x: unknown): asserts x is Snapshot {
     const rows = tables[name];
     if (!Array.isArray(rows)) throw new Error(`table "${name}" is missing`);
     const cols = TABLE_COLUMNS[name];
+    const optional = OPTIONAL_COLUMNS[name] ?? [];
     for (const row of rows) {
       if (typeof row !== 'object' || row === null || Array.isArray(row)) throw new Error(`bad row in "${name}"`);
-      const keys = Object.keys(row as object);
-      if (keys.length !== cols.length) throw new Error(`bad row shape in "${name}"`);
+      for (const key of Object.keys(row as object)) {
+        if (!(cols as readonly string[]).includes(key)) throw new Error(`bad row shape in "${name}"`);
+      }
       for (const col of cols) {
-        if (!(col in (row as object))) throw new Error(`row in "${name}" is missing "${col}"`);
+        if (!(col in (row as object))) {
+          if (optional.includes(col)) continue; // older backup: restores as NULL
+          throw new Error(`row in "${name}" is missing "${col}"`);
+        }
         const v = (row as Record<string, unknown>)[col];
         if (v === null) continue;
         if (typeof v === 'string') continue;

@@ -1,11 +1,12 @@
-import { ActionIcon, Badge, Group, NumberInput, Table, Text, TextInput } from '@mantine/core';
-import React, { useEffect, useState } from 'react';
-import { Boss, Raider, TIER_LABEL } from '../../shared/types';
+import { Anchor, Badge, Button, Group, NumberInput, Popover, Stack, Text, TextInput } from '@mantine/core';
+import { useEffect, useState } from 'react';
+import { Boss, Item, Raider, TIER_LABEL } from '../../shared/types';
 import { Icon } from './Icon';
 import { EmptyState } from './ItemList';
 import { ItemTooltip } from './ItemTooltip';
+import { RaiderAvatar } from './RaiderAvatar';
 import { TierBadge } from './TierBadge';
-import { IconUsers } from '@tabler/icons-react';
+import { IconCheck, IconUsers } from '@tabler/icons-react';
 
 interface Props {
   raiders: Raider[];
@@ -14,7 +15,7 @@ interface Props {
   lockedIn?: number[];
   meId?: number | null;
   editable?: boolean;
-  /** Needed for the public view to list each raider's loot won this session. */
+  /** Needed to list each raider's loot won this session. */
   bosses?: Boss[];
   /** The season's boss/loot pool, for item tooltips. */
   raidId?: string;
@@ -22,124 +23,115 @@ interface Props {
   onRemove?: (raiderId: number) => void;
 }
 
+/**
+ * Raiders rendered like the Loot card: each raider is a boss-style section — avatar + name
+ * header row with a picks-ready checkmark, and their won loot listed below like item rows.
+ */
 export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosses = [], raidId, onUpdate, onRemove }: Props) {
   if (raiders.length === 0) return <EmptyState icon={<IconUsers size={26} />} text="Nobody here yet." />;
   const ready = new Set(readyIds ?? []);
   const locked = new Set(lockedIn ?? []);
-  const picksCell = (id: number) =>
-    lockedIn ? (
-      <Table.Td w={70}>
-        {locked.has(id) ? (
-          <Badge size="xs" variant="light" color="green">
-            picks ✓
-          </Badge>
-        ) : (
-          <Text size="xs" c="dimmed">
-            —
-          </Text>
-        )}
-      </Table.Td>
-    ) : null;
+  const wonBy = (id: number) =>
+    bosses.flatMap((b) => b.items.filter((i) => i.winner_raider_id === id).map((item) => ({ item, bossName: b.name })));
 
-  const items = bosses.flatMap((b) => b.items);
-  const lootCell = (id: number) => {
-    const won = items.filter((i) => i.winner_raider_id === id);
-    return (
-      <Table.Td>
-        {won.length === 0 ? (
-          <Text size="xs" c="dimmed">
-            —
-          </Text>
-        ) : (
-          <Group gap={6}>
-            {won.map((i) => (
-              <Group key={i.id} gap={4} wrap="nowrap">
-                <ItemTooltip raidId={raidId} name={i.name}>
-                  <Badge size="sm" variant="light" color="gray" leftSection={<Icon src={i.icon} size={14} />}>
-                    {i.name}
-                  </Badge>
-                </ItemTooltip>
-                {/* win_tier is only sent for the viewer's own wins: show how they won it, and their pre-pick. */}
-                {i.win_tier && (
-                  <span title={i.my_picked_tier ? `You pre-picked ${TIER_LABEL[i.my_picked_tier]}; it counted as ${TIER_LABEL[i.win_tier]}.` : `Won via ${TIER_LABEL[i.win_tier]} (no pre-pick, rolled live).`}>
-                    <TierBadge tier={i.win_tier} />
-                  </span>
-                )}
-                {i.win_tier && i.my_picked_tier && i.my_picked_tier !== i.win_tier && (
-                  <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-                    picked {TIER_LABEL[i.my_picked_tier]}
-                  </Text>
-                )}
-              </Group>
-            ))}
-          </Group>
-        )}
-      </Table.Td>
-    );
-  };
-
-  if (editable) {
-    return (
-      <Table verticalSpacing="xs" withRowBorders={false}>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Name</Table.Th>
-            <Table.Th>ilvl</Table.Th>
-            <Table.Th>Need</Table.Th>
-            <Table.Th>Dibs</Table.Th>
-            <Table.Th>Loot this session</Table.Th>
-            {lockedIn && <Table.Th>Picks</Table.Th>}
-            {readyIds && <Table.Th>Ready</Table.Th>}
-            <Table.Th />
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {raiders.map((r) => (
-            <EditableRow key={r.id} r={r} ready={readyIds ? ready.has(r.id) : undefined} loot={lootCell(r.id)} picks={picksCell(r.id)} onUpdate={onUpdate!} onRemove={onRemove!} />
-          ))}
-        </Table.Tbody>
-      </Table>
-    );
-  }
-
-  // Public view: name, item level and what they've won — never Need / Dibs state.
   return (
-    <Table verticalSpacing="xs" withRowBorders={false}>
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Name</Table.Th>
-          <Table.Th>ilvl</Table.Th>
-          <Table.Th>Loot this week (this difficulty)</Table.Th>
-          {lockedIn && <Table.Th>Picks</Table.Th>}
-          {readyIds && <Table.Th>Ready</Table.Th>}
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {raiders.map((r) => {
-          return (
-            <Table.Tr key={r.id} style={r.id === meId ? { background: 'rgba(18,184,134,0.08)' } : undefined}>
-              <Table.Td fw={r.id === meId ? 700 : 400} c={r.id === meId ? 'teal.2' : undefined} style={{ whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+    <Stack gap="sm">
+      {raiders.map((r) => {
+        const isMe = r.id === meId;
+        const won = wonBy(r.id);
+        // Ready check (staging) takes over the slot; otherwise it reflects lock-in while open.
+        const status = readyIds ? { on: ready.has(r.id), onTitle: 'Ready', offTitle: 'Not ready yet' }
+          : lockedIn ? { on: locked.has(r.id), onTitle: 'Happy with their picks', offTitle: "Hasn't locked in picks" }
+          : null;
+        return (
+          <div key={r.id} style={isMe ? { background: 'rgba(18,184,134,0.06)', borderRadius: 6, margin: '0 -8px', padding: '2px 8px' } : undefined}>
+            <Group gap="xs" wrap="nowrap">
+              <RaiderAvatar avatar={r.avatar} username={r.username} size="md" ring />
+              <Text size="xs" fw={700} tt="uppercase" c={isMe ? 'teal.2' : 'teal.3'} style={{ letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
                 {r.username}
-                {r.id === meId && (
-                  <Badge size="xs" variant="light" color="teal" ml={6}>
-                    you
-                  </Badge>
-                )}
-              </Table.Td>
-              <Table.Td style={{ verticalAlign: 'top' }}>{r.item_level || '—'}</Table.Td>
-              {lootCell(r.id)}
-              {picksCell(r.id)}
-              {readyIds && <Table.Td>{ready.has(r.id) ? '✓' : ''}</Table.Td>}
-            </Table.Tr>
-          );
-        })}
-      </Table.Tbody>
-    </Table>
+                <Text span size="xs" fw={400} c="dimmed" tt="none" style={{ letterSpacing: 0 }}>
+                  {' '}— {r.item_level || '—'}
+                </Text>
+              </Text>
+              {isMe && (
+                <Badge size="xs" variant="light" color="teal">
+                  you
+                </Badge>
+              )}
+              <div style={{ flex: 1, borderTop: '1px solid var(--mantine-color-dark-4)' }} />
+              {editable && onUpdate && onRemove && <EditRaiderPopover r={r} onUpdate={onUpdate} onRemove={onRemove} />}
+              {status && (
+                <IconCheck
+                  size={16}
+                  title={status.on ? status.onTitle : status.offTitle}
+                  style={
+                    status.on
+                      ? { color: 'var(--mantine-color-teal-4)', filter: 'drop-shadow(0 0 4px var(--mantine-color-teal-5))' }
+                      : { color: 'var(--mantine-color-dark-3)' }
+                  }
+                />
+              )}
+            </Group>
+            {won.length > 0 && (
+              <Stack gap={4} pl="xl" mt={4}>
+                {won.map(({ item, bossName }) => (
+                  <LootRow key={item.id} item={item} bossName={bossName} raidId={raidId} />
+                ))}
+              </Stack>
+            )}
+          </div>
+        );
+      })}
+    </Stack>
+  );
+}
+
+/**
+ * One won item, styled like a Loot card row. No raider name on the right — the row already
+ * sits under the raider. win_tier is present for admins on every win, and for raiders only
+ * on their own wins (the server strips it otherwise), so the tier badge shows exactly where
+ * it's allowed to.
+ */
+function LootRow({ item, bossName, raidId }: { item: Item; bossName: string; raidId?: string }) {
+  return (
+    <Group justify="space-between" wrap="nowrap">
+      <Group gap="xs" wrap="nowrap">
+        <ItemTooltip raidId={raidId} name={item.name}>
+          <span style={{ display: 'inline-flex' }}>
+            <Icon src={item.icon} size="sm" alt={item.name} />
+          </span>
+        </ItemTooltip>
+        <ItemTooltip raidId={raidId} name={item.name}>
+          <Text size="sm">{item.name}</Text>
+        </ItemTooltip>
+        <Text size="xs" c="dimmed">
+          {bossName}
+        </Text>
+      </Group>
+      <Group gap={6} wrap="nowrap">
+        {item.win_tier && (
+          <span
+            title={
+              item.my_picked_tier
+                ? `You pre-picked ${TIER_LABEL[item.my_picked_tier]}; it counted as ${TIER_LABEL[item.win_tier]}.`
+                : `Won via ${TIER_LABEL[item.win_tier]}.`
+            }
+          >
+            <TierBadge tier={item.win_tier} />
+          </span>
+        )}
+        {item.win_tier && item.my_picked_tier && item.my_picked_tier !== item.win_tier && (
+          <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+            picked {TIER_LABEL[item.my_picked_tier]}
+          </Text>
+        )}
+      </Group>
+    </Group>
   );
 }
 
 /** Remaining-charges stepper, labeled "x / limit". Admins may set any value 0-99, even above the limit. */
-function ChargeInput({ value, limit, onChange }: { value: number; limit: number; onChange: (v: number) => void }) {
+export function ChargeInput({ value, limit, onChange }: { value: number; limit: number; onChange: (v: number) => void }) {
   const [val, setVal] = useState<number | string>(value);
   useEffect(() => setVal(value), [value]);
   return (
@@ -161,77 +153,74 @@ function ChargeInput({ value, limit, onChange }: { value: number; limit: number;
   );
 }
 
-function EditableRow({
+/** Admin: per-raider editing (name, ilvl, charges, remove) behind a small popover. */
+function EditRaiderPopover({
   r,
-  ready,
-  loot,
-  picks,
   onUpdate,
   onRemove,
 }: {
   r: Raider;
-  ready?: boolean;
-  loot?: React.ReactNode;
-  picks?: React.ReactNode;
   onUpdate: NonNullable<Props['onUpdate']>;
   onRemove: NonNullable<Props['onRemove']>;
 }) {
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState(r.username);
   const [ilvl, setIlvl] = useState<number | string>(r.item_level);
   useEffect(() => setName(r.username), [r.username]);
   useEffect(() => setIlvl(r.item_level), [r.item_level]);
 
   return (
-    <Table.Tr>
-      <Table.Td>
-        <TextInput
-          size="xs"
-          value={name}
-          onChange={(e) => setName(e.currentTarget.value)}
-          onBlur={() => name.trim() && name !== r.username && onUpdate(r.id, { username: name.trim() })}
-        />
-      </Table.Td>
-      <Table.Td>
-        <NumberInput
-          size="xs"
-          w={80}
-          value={ilvl}
-          min={0}
-          allowDecimal={false}
-          onChange={setIlvl}
-          onBlur={() => typeof ilvl === 'number' && ilvl !== r.item_level && onUpdate(r.id, { itemLevel: ilvl })}
-        />
-      </Table.Td>
-      <Table.Td>
-        <Group gap={6} wrap="nowrap">
-          <ChargeInput value={r.need_remaining} limit={r.need_limit} onChange={(v) => onUpdate(r.id, { needRemaining: v })} />
-          {/* {r.need_remaining === 0 && (
-            <Badge size="xs" color="yellow" variant="light" title="No Need charges left this session (won with Need or Dibs).">
-              used
-            </Badge>
-          )} */}
-        </Group>
-      </Table.Td>
-      <Table.Td>
-        <Group gap={6} wrap="nowrap">
-          <ChargeInput value={r.dibs_remaining} limit={r.dibs_limit} onChange={(v) => onUpdate(r.id, { dibsRemaining: v })} />
-          {r.dibs_remaining > 0 && r.need_remaining === 0 && (
-            <Badge size="xs" color="yellow" variant="light" title="Dibs charges left (requires available Need charges).">
-              locked
-            </Badge>
-          )}
-        </Group>
-      </Table.Td>
-      {loot}
-      {picks}
-      {ready !== undefined && <Table.Td>{ready ? '✓' : ''}</Table.Td>}
-      <Table.Td>
-        <Group justify="flex-end">
-          <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => onRemove(r.id)} title="Remove from session">
-            ×
-          </ActionIcon>
-        </Group>
-      </Table.Td>
-    </Table.Tr>
+    <Popover opened={open} onChange={setOpen} position="bottom-end" withArrow shadow="md" withinPortal>
+      <Popover.Target>
+        <Anchor component="button" size="xs" c="dimmed" onClick={() => setOpen((o) => !o)}>
+          edit
+        </Anchor>
+      </Popover.Target>
+      <Popover.Dropdown p="sm" miw={260}>
+        <Stack gap="xs">
+          <TextInput
+            label="Name"
+            size="xs"
+            value={name}
+            onChange={(e) => setName(e.currentTarget.value)}
+            onBlur={() => name.trim() && name !== r.username && onUpdate(r.id, { username: name.trim() })}
+          />
+          <NumberInput
+            label="ilvl"
+            size="xs"
+            w={100}
+            value={ilvl}
+            min={0}
+            allowDecimal={false}
+            onChange={setIlvl}
+            onBlur={() => typeof ilvl === 'number' && ilvl !== r.item_level && onUpdate(r.id, { itemLevel: ilvl })}
+          />
+          <Group gap="md" wrap="nowrap">
+            <div>
+              <Text size="xs" fw={500} mb={2}>
+                Need
+              </Text>
+              <ChargeInput value={r.need_remaining} limit={r.need_limit} onChange={(v) => onUpdate(r.id, { needRemaining: v })} />
+            </div>
+            <div>
+              <Text size="xs" fw={500} mb={2}>
+                Dibs
+              </Text>
+              <Group gap={6} wrap="nowrap">
+                <ChargeInput value={r.dibs_remaining} limit={r.dibs_limit} onChange={(v) => onUpdate(r.id, { dibsRemaining: v })} />
+                {r.dibs_remaining > 0 && r.need_remaining === 0 && (
+                  <Badge size="xs" color="yellow" variant="light" title="Dibs charges left (requires available Need charges).">
+                    locked
+                  </Badge>
+                )}
+              </Group>
+            </div>
+          </Group>
+          <Button size="compact-xs" variant="subtle" color="red" onClick={() => onRemove(r.id)}>
+            Remove from session
+          </Button>
+        </Stack>
+      </Popover.Dropdown>
+    </Popover>
   );
 }

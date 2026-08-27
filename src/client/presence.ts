@@ -10,9 +10,9 @@ export interface PresenceHandlers {
 }
 
 /**
- * Keeps a socket open to the presence service while logged in (that's what "logged in" means
- * server-side) and reports who else is online. Admin pages pass `observe` to watch without
- * a raider identity.
+ * Keeps a socket open to the presence service while logged in, purely to power the
+ * online/offline badges — login lifetime lives in the database, not this socket.
+ * Admin pages pass `observe` to watch without a raider identity.
  */
 export function usePresence(identity: Identity | null, handlers: PresenceHandlers, observe = false) {
   const [online, setOnline] = useState<Set<number>>(new Set());

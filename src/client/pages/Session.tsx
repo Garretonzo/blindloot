@@ -1,7 +1,7 @@
-import { Alert, Badge, Button, Group, NumberInput, Stack, Switch, Text, Title } from '@mantine/core';
+import { Alert, Badge, Button, Group, NumberInput, Stack, Text, Title } from '@mantine/core';
 import { SectionCard } from '../components/SectionCard';
 import { notifications } from '@mantine/notifications';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, Identity } from '../api';
 import { useIdentity } from '../identity';
@@ -10,7 +10,7 @@ import { useSessionSocket } from '../useSessionSocket';
 import { ItemList } from '../components/ItemList';
 import { RaiderTable } from '../components/RaiderTable';
 import { RollPanel } from '../components/RollPanel';
-import { BatchResults } from '../components/BatchResults';
+import { LockInBar, LOCK_IN_BAR_HEIGHT } from '../components/LockInBar';
 
 export function SessionPage() {
   const sessionId = Number(useParams().sessionId);
@@ -20,9 +20,13 @@ export function SessionPage() {
   const me = detail?.raiders.find((r) => r.id === identity?.raiderId) ?? null;
   const { state: live, connected, send } = useSessionSocket(sessionId, me?.id ?? null, identity?.token ?? null);
 
+  // Sequence refreshes so a slow earlier response can't overwrite a newer one
+  // (that race used to blank out the viewer's own Dibs/Need counts).
+  const seq = useRef(0);
   const refresh = useCallback(() => {
-    api.session(sessionId, identity?.raiderId).then(setDetail).catch(() => setDetail(null));
-    if (identity) api.plans(sessionId, identity.raiderId).then(setPlans).catch(() => {});
+    const n = ++seq.current;
+    api.session(sessionId).then((d) => { if (seq.current === n) setDetail(d); }).catch(() => {});
+    if (identity) api.plans(sessionId).then((p) => { if (seq.current === n) setPlans(p); }).catch(() => {});
   }, [sessionId, identity]);
 
   useEffect(refresh, [refresh, live?.revision]);
@@ -39,7 +43,7 @@ export function SessionPage() {
       await api.setPlan(sessionId, identity, itemId, tier);
     } catch (e) {
       notifications.show({ color: 'red', message: (e as Error).message });
-      api.plans(sessionId, identity.raiderId).then(setPlans).catch(() => {});
+      api.plans(sessionId).then(setPlans).catch(() => {});
     }
   };
 
@@ -48,9 +52,11 @@ export function SessionPage() {
   // Unresolved items the viewer has pre-picked Need or Dibs on.
   const unresolved = new Set(detail.bosses.flatMap((b) => b.items).filter((i) => i.resolved_at == null).map((i) => i.id));
   const bigPlans = Object.entries(plans).filter(([id, tier]) => unresolved.has(Number(id)) && (tier === 'need' || tier === 'dibs'));
+  // Pinned to the viewport bottom — visible regardless of scrolling, and no longer dependent on the live socket.
+  const showLockInBar = !!me && detail.session.status === 'open' && unresolved.size > 0;
 
   return (
-    <Stack gap="lg">
+    <Stack gap="lg" pb={showLockInBar ? LOCK_IN_BAR_HEIGHT : undefined}>
       <Group justify="space-between">
         <div>
           <Text size="xs" c="dimmed">
@@ -101,8 +107,6 @@ export function SessionPage() {
         </Text>
       )}
 
-      {live?.batchResults && live.phase === 'open' && <BatchResults results={live.batchResults} bosses={detail.bosses} raidId={detail.season.raid_id} />}
-
       {live && (
         <RollPanel
           live={live}
@@ -115,7 +119,7 @@ export function SessionPage() {
         />
       )}
 
-      <SectionCard title="Loot">
+      <SectionCard title="Loot" collapsible>
         <Alert variant="light" color="orange" mb="md">
           <b>{detail.season.need_per_session === 1 ? 'One Need win' : `${detail.season.need_per_session} Need wins`}</b> per week (per
           difficulty), <b>{detail.season.dibs_per_season === 1 ? 'one Dibs' : `${detail.season.dibs_per_season} Dibs`}</b> per season. 
@@ -127,26 +131,6 @@ export function SessionPage() {
             <b>Your pre-picks are your rolls.</b> When loot's done the officer resolves everything from them in one go
             {live?.shuffle !== false ? '' : ', in list order'}. No pick, no roll.
           </Text>
-        )}
-        {me && detail.session.status === 'open' && unresolved.size > 0 && live && (
-          <Group justify="space-between" mb="md" p="sm" style={{ borderRadius: 8, border: '1px solid var(--mantine-color-dark-5)', background: 'var(--mantine-color-dark-6)' }}>
-            <div>
-              <Text size="sm" fw={600}>
-                Happy with your picks?
-              </Text>
-              <Text size="xs" c="dimmed">
-                Tell the officer you're good to go. {live.lockedIn.length} of {detail.raiders.length} are. It resets if loot changes.
-              </Text>
-            </div>
-            <Switch
-              size="md"
-              color="teal"
-              onLabel="YES"
-              offLabel="NO"
-              checked={live.lockedIn.includes(me.id)}
-              onChange={(e) => send({ type: 'lockIn', value: e.currentTarget.checked })}
-            />
-          </Group>
         )}
         {me && bigPlans.length > (me.need_remaining || 1) && (
           <Alert variant="light" color="red" mb="md" title={`You're pre-picking Need/Dibs on ${bigPlans.length} items`}>
@@ -160,7 +144,7 @@ export function SessionPage() {
         <ItemList bosses={detail.bosses} raiders={detail.raiders} live={live} raidId={detail.season.raid_id} me={me} plans={plans} onPlan={me ? setPlan : undefined} />
       </SectionCard>
 
-      <SectionCard title="Raiders" right={<Text size="xs" c="dimmed">{detail.raiders.length} joined</Text>}>
+      <SectionCard title="Raiders" collapsible right={<Text size="xs" c="dimmed">{detail.raiders.length} joined</Text>}>
         <RaiderTable
           raiders={detail.raiders}
           bosses={detail.bosses}
@@ -170,6 +154,10 @@ export function SessionPage() {
           lockedIn={live?.phase === 'open' ? live.lockedIn : undefined}
         />
       </SectionCard>
+
+      {showLockInBar && me && (
+        <LockInBar sessionId={sessionId} meId={me.id} raiderCount={detail.raiders.length} live={live} connected={connected} />
+      )}
     </Stack>
   );
 }
@@ -205,7 +193,7 @@ function JoinForm({ sessionId, seasonId, me, onJoined }: { sessionId: number; se
   };
 
   return (
-    <SectionCard title="Join this session">
+    <SectionCard title="Join this session" collapsible>
       <Stack gap="xs">
         <NumberInput label="Your highest item level (character panel mouse-over tooltip)." value={itemLevel} onChange={setItemLevel} min={0} allowDecimal={false} autoFocus />
         {seasonInfo === null && (

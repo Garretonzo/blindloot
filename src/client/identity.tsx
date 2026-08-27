@@ -1,4 +1,5 @@
-import { Anchor, Button, PasswordInput, Select, Stack, Text } from '@mantine/core';
+import { Anchor, Button, Group, PasswordInput, Select, Stack, Text } from '@mantine/core';
+import { RaiderAvatar } from './components/RaiderAvatar';
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { Link } from 'react-router-dom';
@@ -92,23 +93,48 @@ export function IdentityProvider({ children, observe = false }: { children: Reac
 
 export const useIdentity = () => useContext(IdentityContext);
 
-/** First-visit screen: pick your name from the roster. Names already logged in are greyed out. */
+/** Dispatched (with the new data URL or null as detail) after the viewer changes their avatar. */
+export const AVATAR_UPDATED_EVENT = 'loot:avatar-updated';
+
+/** The logged-in raider's avatar data URL (null when none / not logged in), kept fresh across uploads. */
+export function useMyAvatar(): string | null {
+  const { identity } = useIdentity();
+  const raiderId = identity?.raiderId ?? null;
+  const [avatar, setAvatar] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (raiderId == null) return setAvatar(null);
+    let gone = false;
+    api
+      .roster()
+      .then((rows) => {
+        if (!gone) setAvatar(rows.find((r) => r.id === raiderId)?.avatar ?? null);
+      })
+      .catch(() => {});
+    const onUpdated = (e: Event) => setAvatar((e as CustomEvent<string | null>).detail ?? null);
+    window.addEventListener(AVATAR_UPDATED_EVENT, onUpdated);
+    return () => {
+      gone = true;
+      window.removeEventListener(AVATAR_UPDATED_EVENT, onUpdated);
+    };
+  }, [raiderId]);
+
+  return avatar;
+}
+
+/** First-visit screen: pick your name from the roster and log in with your password. */
 export function NamePrompt() {
   const { setIdentity } = useIdentity();
-  const [roster, setRoster] = useState<{ id: number; username: string; has_password: number }[]>([]);
-  const [online, setOnline] = useState<Set<number>>(new Set());
+  const [roster, setRoster] = useState<{ id: number; username: string; avatar: string | null; has_password: number }[]>([]);
   const [picked, setPicked] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Not logged in yet, so no presence socket: poll so the list stays current.
+  // Poll so a freshly added roster name shows up without a reload.
   useEffect(() => {
-    const load = () => {
-      api.roster().then(setRoster).catch(() => {});
-      api.presence().then((p) => setOnline(new Set(p.online))).catch(() => {});
-    };
+    const load = () => api.roster().then(setRoster).catch(() => {});
     load();
     const t = window.setInterval(load, 5000);
     return () => window.clearInterval(t);
@@ -138,7 +164,6 @@ export function NamePrompt() {
       setError((e as Error).message);
       setPassword('');
       setConfirm('');
-      api.presence().then((p) => setOnline(new Set(p.online))).catch(() => {});
     } finally {
       setBusy(false);
     }
@@ -150,11 +175,16 @@ export function NamePrompt() {
           <Select
             label="Your name"
             placeholder={roster.length ? "Pick your name" : "Roster is empty. Poke the loot officer."}
-            data={roster.map((r) => ({
-              value: String(r.id),
-              label: online.has(r.id) ? `${r.username} (logged in)` : r.username,
-              disabled: online.has(r.id),
-            }))}
+            data={roster.map((r) => ({ value: String(r.id), label: r.username }))}
+            renderOption={({ option }) => {
+              const r = roster.find((x) => String(x.id) === option.value);
+              return (
+                <Group gap="xs" wrap="nowrap">
+                  <RaiderAvatar avatar={r?.avatar} username={option.label} size="sm" />
+                  <Text size="sm">{option.label}</Text>
+                </Group>
+              );
+            }}
             value={picked}
             onChange={pick}
             searchable
@@ -185,9 +215,6 @@ export function NamePrompt() {
               </Text>
             </>
           )}
-          <Text size="xs" c="dimmed">
-            Greyed-out names are already logged in somewhere. Close that tab (frees up in ~30 s) or nag the loot officer.
-          </Text>
           <Button onClick={submit} loading={busy} disabled={!picked || !password || (needsSetup && !confirm)}>
             That's me
           </Button>

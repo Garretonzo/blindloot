@@ -57,10 +57,12 @@ export interface Session {
 export interface Raider {
   id: number;
   username: string;
+  /** Tiny data-URL avatar the raider uploaded (present in session detail and roster payloads); null = none. */
+  avatar?: string | null;
   item_level: number;
-  /** Season-level Dibs charges still unspent. */
+  /** Season-level Dibs charges still unspent. Non-admin payloads OMIT this for everyone but the viewer — only read it on `me` or in admin views. */
   dibs_remaining: number;
-  /** Session-level Need charges still unspent (a Dibs win also spends one). */
+  /** Session-level Need charges still unspent (a Dibs win also spends one). Omitted for others in non-admin payloads, like dibs_remaining. */
   need_remaining: number;
   /** The season's configured Dibs allowance (for "x of y" displays). */
   dibs_limit: number;
@@ -203,8 +205,6 @@ export interface LiveState {
   lastResult: ItemResult | null;
   /** Smart item order (priority + random ties) for roll-offs and batches; false = plain list order. */
   shuffle: boolean;
-  /** Results of the last instant batch (replaced by the next one; cleared when a live roll-off starts). */
-  batchResults: ItemResult[] | null;
   /** Raiders who've said they're happy with their pre-picks (cleared when loot changes or a batch runs). */
   lockedIn: number[];
   /** bump to tell clients to refetch session detail */

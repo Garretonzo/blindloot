@@ -65,6 +65,12 @@ describe('insertStatements', () => {
     expect(insertStatements('rolls', [])).toEqual([]);
   });
 
+  it('inlines NULL for optional columns absent from old snapshots', () => {
+    const stmts = insertStatements('raiders', [{ id: 1, username: 'old', created_at: 5, password_hash: null } as never]);
+    expect(stmts).toHaveLength(1);
+    expect(stmts[0]).toBe("INSERT INTO raiders (id, username, created_at, password_hash, avatar) VALUES (1, 'old', 5, NULL, NULL)");
+  });
+
   it('packs many rows into few statements, all under the size budget', () => {
     const rows = Array.from({ length: 5000 }, (_, i) => ({
       id: i + 1,
@@ -90,7 +96,19 @@ describe('insertStatements', () => {
 describe('validateSnapshot', () => {
   it('accepts a well-formed snapshot', () => {
     const snap = emptySnapshot();
-    snap.tables.raiders.push({ id: 1, username: 'a😀b', created_at: 5, password_hash: null });
+    snap.tables.raiders.push({ id: 1, username: 'a😀b', created_at: 5, password_hash: null, avatar: null });
+    expect(() => validateSnapshot(snap)).not.toThrow();
+  });
+
+  it('accepts an old snapshot missing an optional column (pre-avatar raiders)', () => {
+    const snap = emptySnapshot();
+    snap.tables.raiders.push({ id: 1, username: 'old', created_at: 5, password_hash: null } as never);
+    expect(() => validateSnapshot(snap)).not.toThrow();
+  });
+
+  it('accepts a raider row with an avatar data URL', () => {
+    const snap = emptySnapshot();
+    snap.tables.raiders.push({ id: 1, username: 'new', created_at: 5, password_hash: null, avatar: 'data:image/webp;base64,AAAA' });
     expect(() => validateSnapshot(snap)).not.toThrow();
   });
 
@@ -115,7 +133,7 @@ describe('validateSnapshot', () => {
 
     const missingCol = emptySnapshot();
     missingCol.tables.plans.push({ session_id: 1, item_id: 1, raider_id: 1 } as never);
-    expect(() => validateSnapshot(missingCol)).toThrow(/shape/);
+    expect(() => validateSnapshot(missingCol)).toThrow(/missing/);
 
     const badType = emptySnapshot();
     badType.tables.plans.push({ session_id: 1, item_id: 1, raider_id: 1, tier: { a: 1 } } as never);

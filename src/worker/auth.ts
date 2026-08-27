@@ -1,6 +1,6 @@
-import { Context, MiddlewareHandler } from 'hono';
+﻿import { Context, MiddlewareHandler } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
-import { Env } from './env';
+import { AppEnv, Env } from './env';
 
 const COOKIE = 'loot_admin';
 
@@ -53,7 +53,7 @@ export async function roleToken(env: Env, role: Role): Promise<string> {
 }
 
 /** Returns the role encoded in the admin cookie, or null if absent/invalid. */
-export async function getRole(c: Context<{ Bindings: Env }>): Promise<Role | null> {
+export async function getRole(c: Context<AppEnv>): Promise<Role | null> {
   const cookie = getCookie(c, COOKIE);
   if (!cookie) return null;
   const role = cookie.split(':')[0] as Role;
@@ -62,7 +62,7 @@ export async function getRole(c: Context<{ Bindings: Env }>): Promise<Role | nul
   return cookie === (await roleToken(c.env, role)) ? role : null;
 }
 
-export async function isAdmin(c: Context<{ Bindings: Env }>): Promise<boolean> {
+export async function isAdmin(c: Context<AppEnv>): Promise<boolean> {
   return (await getRole(c)) != null;
 }
 
@@ -73,7 +73,7 @@ export function roleForPassword(env: Env, password: string): Role | null {
   return null;
 }
 
-export async function setAdminCookie(c: Context<{ Bindings: Env }>, role: Role) {
+export async function setAdminCookie(c: Context<AppEnv>, role: Role) {
   setCookie(c, COOKIE, await roleToken(c.env, role), {
     httpOnly: true,
     sameSite: 'Lax',
@@ -82,7 +82,7 @@ export async function setAdminCookie(c: Context<{ Bindings: Env }>, role: Role) 
   });
 }
 
-export function clearAdminCookie(c: Context<{ Bindings: Env }>) {
+export function clearAdminCookie(c: Context<AppEnv>) {
   setCookie(c, COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 });
 }
 
@@ -96,14 +96,14 @@ async function siteToken(env: Env): Promise<string> {
 /** Site gate is active only when SITE_PASSWORD is configured. */
 export const siteGateEnabled = (env: Env) => !!env.SITE_PASSWORD;
 
-export async function hasSiteAccess(c: Context<{ Bindings: Env }>): Promise<boolean> {
+export async function hasSiteAccess(c: Context<AppEnv>): Promise<boolean> {
   if (!siteGateEnabled(c.env)) return true;
   if (await isAdmin(c)) return true;
   const cookie = getCookie(c, SITE_COOKIE);
   return !!cookie && cookie === (await siteToken(c.env));
 }
 
-export async function setSiteCookie(c: Context<{ Bindings: Env }>) {
+export async function setSiteCookie(c: Context<AppEnv>) {
   setCookie(c, SITE_COOKIE, await siteToken(c.env), {
     httpOnly: true,
     sameSite: 'Lax',
@@ -112,17 +112,17 @@ export async function setSiteCookie(c: Context<{ Bindings: Env }>) {
   });
 }
 
-export const requireSite: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+export const requireSite: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (!(await hasSiteAccess(c))) return c.json({ error: 'site password required' }, 403);
   await next();
 };
 
-export const requireAdmin: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+export const requireAdmin: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (!(await isAdmin(c))) return c.json({ error: 'unauthorized' }, 401);
   await next();
 };
 
-export const requireSuper: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+export const requireSuper: MiddlewareHandler<AppEnv> = async (c, next) => {
   if ((await getRole(c)) !== 'super') return c.json({ error: 'super admin required' }, 403);
   await next();
 };

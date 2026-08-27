@@ -1,9 +1,14 @@
 import { RollEntry, Season, Session, SessionDetail, SummaryItem, Tier } from '../shared/types';
 
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body) headers['content-type'] = 'application/json';
+  // The server derives who we are from this token — no endpoint trusts a client-sent raiderId.
+  const id = loadIdentity();
+  if (id) headers['x-loot-token'] = id.token;
   const res = await fetch(url, {
     method,
-    headers: body ? { 'content-type': 'application/json' } : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
     credentials: 'same-origin',
   });
@@ -30,12 +35,15 @@ export const api = {
     login: (password: string) => req<{ ok: true }>('POST', '/api/site/login', { password }),
   },
   seasons: () => req<{ seasons: Season[]; sessions: Session[] }>('GET', '/api/seasons'),
-  session: (id: number, raiderId?: number | null) =>
-    req<SessionDetail>('GET', `/api/sessions/${id}${raiderId ? `?raiderId=${raiderId}` : ''}`),
-  plans: (id: number, raiderId: number) => req<Record<number, Tier>>('GET', `/api/sessions/${id}/plans?raiderId=${raiderId}`),
+  session: (id: number) => req<SessionDetail>('GET', `/api/sessions/${id}`),
+  plans: (id: number) => req<Record<number, Tier>>('GET', `/api/sessions/${id}/plans`),
   setPlan: (id: number, me: Identity, itemId: number, tier: Tier | null) =>
-    req('PUT', `/api/sessions/${id}/plans`, { raiderId: me.raiderId, token: me.token, itemId, tier }),
-  roster: () => req<{ id: number; username: string; has_password: number }[]>('GET', '/api/raiders'),
+    req('PUT', `/api/sessions/${id}/plans`, { token: me.token, itemId, tier }),
+  /** REST fallback for the "happy with my picks" toggle when the session socket is down. */
+  lockIn: (id: number, value: boolean) => req('POST', `/api/sessions/${id}/lock-in`, { value }),
+  roster: () => req<{ id: number; username: string; avatar: string | null; has_password: number }[]>('GET', '/api/raiders'),
+  /** Set (or clear, with null) the logged-in raider's avatar — a tiny data URL from fileToAvatar. */
+  setAvatar: (avatar: string | null) => req('PUT', '/api/raiders/me/avatar', { avatar }),
   presence: () => req<{ online: number[] }>('GET', '/api/presence'),
   /**
    * Log in as a roster raider. Passing the current token makes it an idempotent refresh of an
@@ -49,9 +57,9 @@ export const api = {
   mySeasons: (raiderId: number) =>
     req<{ seasonId: number; dibsRemaining: number; lastItemLevel: number }[]>('GET', `/api/raiders/${raiderId}/seasons`),
   /** Everything the logged-in raider has ever won, across all seasons, newest first. */
-  myWins: (me: Identity) => req<{ wins: MyWin[] }>('GET', `/api/raiders/${me.raiderId}/wins?token=${encodeURIComponent(me.token)}`),
+  myWins: (me: Identity) => req<{ wins: MyWin[] }>('GET', `/api/raiders/${me.raiderId}/wins`),
   join: (id: number, me: Identity, itemLevel: number) =>
-    req<{ raiderId: number; username: string }>('POST', `/api/sessions/${id}/join`, { raiderId: me.raiderId, token: me.token, itemLevel }),
+    req<{ raiderId: number; username: string }>('POST', `/api/sessions/${id}/join`, { token: me.token, itemLevel }),
 
   admin: {
     me: () => req<{ admin: boolean; super: boolean }>('GET', '/api/admin/me'),
@@ -98,6 +106,11 @@ export const api = {
     removeRaider: (sessionId: number, raiderId: number) =>
       req('DELETE', `/api/admin/sessions/${sessionId}/raiders/${raiderId}`),
     history: (seasonId: number) => req<HistoryData>('GET', `/api/admin/seasons/${seasonId}/history`),
+    /** Raiders who have raided this season, with their remaining season-level Dibs. */
+    seasonRaiders: (seasonId: number) =>
+      req<{ id: number; username: string; dibs_remaining: number }[]>('GET', `/api/admin/seasons/${seasonId}/raiders`),
+    updateSeasonRaider: (seasonId: number, raiderId: number, dibsRemaining: number) =>
+      req('PATCH', `/api/admin/seasons/${seasonId}/raiders/${raiderId}`, { dibsRemaining }),
     backups: {
       list: () => req<BackupMeta[]>('GET', '/api/admin/backups'),
       create: (name: string) => req<BackupMeta>('POST', '/api/admin/backups', { name }),
@@ -164,7 +177,7 @@ export interface HistoryData {
 export interface Identity {
   raiderId: number;
   username: string;
-  /** Login token from the presence service; required for raider actions. */
+  /** Durable login token (one per device); sent on every request to prove who we are. */
   token: string;
 }
 

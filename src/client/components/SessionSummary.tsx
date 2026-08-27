@@ -17,7 +17,9 @@ const MODE: Record<string, { color: string; label: string }> = {
 /** Admin-only: everything that has happened with loot this session, in resolution order. */
 export function SessionSummary({ items, raidId }: { items: SummaryItem[]; raidId?: string }) {
   const [filter, setFilter] = useState<'all' | 'big'>('all');
-  const shown = filter === 'all' ? items : items.filter((i) => i.winTier === 'need' || i.winTier === 'dibs');
+  // Items nobody actually rolled on (and nobody won) are clutter — the header count still tells the story.
+  const rolled = items.filter((i) => i.winnerId != null || i.entries.some((e) => e.tier !== 'pass'));
+  const shown = filter === 'all' ? rolled : rolled.filter((i) => i.winTier === 'need' || i.winTier === 'dibs');
   const awarded = items.filter((i) => i.winnerId != null).length;
 
   return (
@@ -57,9 +59,8 @@ export function SessionSummary({ items, raidId }: { items: SummaryItem[]; raidId
 }
 
 function ItemBlock({ it, raidId }: { it: SummaryItem; raidId?: string }) {
-  const rollers = it.entries.filter((e) => e.tier !== 'pass');
-  const passers = it.entries.filter((e) => e.tier === 'pass');
-  const ordered = [...rankEntries(rollers), ...passers];
+  // Passers are noise — only actual rollers are shown.
+  const ordered = rankEntries(it.entries.filter((e) => e.tier !== 'pass'));
   const showIlvl = it.entries.some((e) => e.tier === 'dibs');
   const mode = it.mode ? MODE[it.mode] : null;
   return (
@@ -147,11 +148,10 @@ function ItemBlock({ it, raidId }: { it: SummaryItem; raidId?: string }) {
 }
 
 function EntryRow({ e, showIlvl }: { e: RollEntry; showIlvl: boolean }) {
-  const passed = e.tier === 'pass';
   const picked = e.pickedTier ?? null;
   const changed = picked != null && picked !== e.tier;
   return (
-    <Table.Tr style={e.won ? { background: 'rgba(18,184,134,0.10)' } : passed ? { opacity: 0.55 } : undefined}>
+    <Table.Tr style={e.won ? { background: 'rgba(18,184,134,0.10)' } : undefined}>
       <Table.Td fz="xs" fw={e.won ? 700 : 400}>
         {e.username}
       </Table.Td>
@@ -184,7 +184,7 @@ function EntryRow({ e, showIlvl }: { e: RollEntry; showIlvl: boolean }) {
         </Group>
       </Table.Td>
       <Table.Td fz="xs" ta="right" ff="monospace">
-        {passed ? '' : (e.roll ?? '—')}
+        {e.roll ?? '—'}
       </Table.Td>
       {showIlvl && (
         <Table.Td fz="xs" ta="right" c={e.tier === 'dibs' ? undefined : 'dimmed'}>
