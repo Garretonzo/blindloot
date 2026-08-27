@@ -553,7 +553,7 @@ adminRoutes.delete('/sessions/:id/bosses/:bossId', async (c) => {
 // ---- site-wide raider roster ----
 adminRoutes.get('/raiders', async (c) => {
   const rows = await c.env.DB.prepare(
-    'SELECT id, username, created_at, (password_hash IS NOT NULL) AS has_password FROM raiders ORDER BY username COLLATE NOCASE',
+    'SELECT id, username, avatar, created_at, (password_hash IS NOT NULL) AS has_password FROM raiders ORDER BY username COLLATE NOCASE',
   ).all();
   return c.json(rows.results);
 });

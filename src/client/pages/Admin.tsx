@@ -3,6 +3,7 @@ import { IconChevronDown, IconChevronRight } from '@tabler/icons-react';
 import { RAIDS, raidById, raidLabel } from '../../shared/raids';
 import { SectionCard, SubHeader } from '../components/SectionCard';
 import { ChargeInput } from '../components/RaiderTable';
+import { RaiderAvatar } from '../components/RaiderAvatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
@@ -135,13 +136,17 @@ function RosterRow({
   return (
     <Table.Tr>
       <Table.Td>
-        <TextInput
-          size="xs"
-          value={name}
-          maxLength={32}
-          onChange={(e) => setName(e.currentTarget.value)}
-          onBlur={() => name.trim() && name.trim() !== r.username && onRename(r.id, name.trim())}
-        />
+        <Group gap="xs" wrap="nowrap">
+          <RaiderAvatar avatar={r.avatar} username={r.username} size="sm" />
+          <TextInput
+            size="xs"
+            style={{ flex: 1 }}
+            value={name}
+            maxLength={32}
+            onChange={(e) => setName(e.currentTarget.value)}
+            onBlur={() => name.trim() && name.trim() !== r.username && onRename(r.id, name.trim())}
+          />
+        </Group>
       </Table.Td>
       <Table.Td w={200}>
         <Group gap={6} wrap="nowrap">

@@ -157,6 +157,8 @@ export interface PlanPreview {
 export interface RosterRaider {
   id: number;
   username: string;
+  /** Tiny data-URL avatar, null = none. */
+  avatar: string | null;
   created_at: number;
   /** 0 = passwordless: their next login prompts them to set one. */
   has_password: number;
