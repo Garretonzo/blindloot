@@ -23,7 +23,7 @@ export const TABLE_COLUMNS = {
   raiders: ['id', 'username', 'created_at', 'password_hash', 'avatar'],
   sessions: ['id', 'season_id', 'name', 'status', 'created_at'],
   bosses: ['id', 'session_id', 'name', 'icon', 'sort_order'],
-  items: ['id', 'boss_id', 'name', 'icon', 'sort_order', 'winner_raider_id', 'win_tier', 'resolved_at', 'resolved_mode'],
+  items: ['id', 'boss_id', 'name', 'icon', 'sort_order', 'winner_raider_id', 'win_tier', 'resolved_at', 'resolved_mode', 'resolve_run'],
   season_raiders: ['season_id', 'raider_id', 'dibs_remaining'],
   session_raiders: ['session_id', 'raider_id', 'item_level', 'need_remaining', 'joined_at'],
   rolls: ['id', 'item_id', 'raider_id', 'tier', 'picked_tier', 'roll_value', 'won'],
@@ -35,6 +35,7 @@ export type TableName = keyof typeof TABLE_COLUMNS;
 /** Columns added after older backups were taken: may be absent from snapshot rows (restored as NULL). */
 export const OPTIONAL_COLUMNS: { [T in TableName]?: readonly string[] } = {
   raiders: ['avatar'],
+  items: ['resolve_run'],
 };
 
 /** Parents before children, so inserts satisfy D1's (always-on) foreign key enforcement. */

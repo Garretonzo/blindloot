@@ -1,7 +1,7 @@
 import { Badge, Button, Checkbox, Group, RingProgress, SimpleGrid, Stack, Table, Text } from '@mantine/core';
 import { IconCheck, IconDice5, IconTrophy } from '@tabler/icons-react';
 import { SectionCard } from './SectionCard';
-import { Boss, canDibs, LiveState, Raider, Tier, TIERS, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
+import { Boss, canDibs, hasWonCopy, LiveState, Raider, Tier, TIERS, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
 import { TierBadge } from './TierBadge';
 import { Icon } from './Icon';
 import { ItemTooltip } from './ItemTooltip';
@@ -142,6 +142,8 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
   if (live.phase === 'item') {
     const mine = me ? live.choices[me.id] : undefined;
     const count = live.choiceCount;
+    // One win per copy: a raider who already won an item with this name is auto-passed here.
+    const autoPassed = me != null && item != null && hasWonCopy(bosses, me.id, item);
     return (
       <SectionCard
         title="Rolling"
@@ -157,7 +159,11 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
         <Stack gap="sm">
           {header}
           {adminControls && <AdminBar live={live} controls={adminControls} />}
-          {me ? (
+          {me && autoPassed ? (
+            <Text size="sm" ta="center" c="dimmed">
+              You already won {item.name} this session — you're auto-passed on this copy.
+            </Text>
+          ) : me ? (
             <SimpleGrid cols={{ base: 3, xs: 6 }}>
               {TIERS.map((t) => {
                 const disabled = (t === 'need' && me.need_remaining <= 0) || (t === 'dibs' && !canDibs(me));
@@ -184,12 +190,12 @@ export function RollPanel({ live, bosses, raiders, me, onChoose, onReady, adminC
               Join the session if you want to roll. Spectators don't get loot.
             </Text>
           )}
-          {me && (
+          {me && !autoPassed && (
             <Text size="sm" ta="center" c={mine ? TIER_COLOR[mine] : 'dimmed'} fw={mine ? 600 : 400}>
               {mine ? `Locked in: ${TIER_LABEL[mine]}` : "You haven't rolled. Tick tock."}
             </Text>
           )}
-          {me && (me.need_remaining <= 0 || !canDibs(me)) && (
+          {me && !autoPassed && (me.need_remaining <= 0 || !canDibs(me)) && (
             <Text size="xs" ta="center" c="dimmed">
               {me.need_remaining <= 0
                 ? `No Need charges left this session (${me.need_limit} per session)${me.dibs_remaining > 0 ? ' — Dibs requires one too, so it is locked' : ''}. Back next week or difficulty.`

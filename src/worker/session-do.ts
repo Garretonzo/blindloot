@@ -7,8 +7,10 @@ import {
   getPendingItemIds,
   getPendingPlans,
   getPlansForItem,
+  getRaidersWhoWonCopy,
   getSessionRaiders,
   getWinCounts,
+  getWonItemNames,
   persistResult,
   ResolveMode,
   setSessionStatus,
@@ -43,6 +45,8 @@ const initialState = (): LiveState => ({
   shuffle: true,
   lockedIn: [],
   revision: 0,
+  runId: null,
+  batchReveal: null,
 });
 
 export class SessionDO extends DurableObject<Env> {
@@ -275,11 +279,16 @@ export class SessionDO extends DurableObject<Env> {
       const j = rnd[i] % (i + 1);
       [ids[i], ids[j]] = [ids[j], ids[i]];
     }
-    const [plans, raiders] = await Promise.all([getPendingPlans(this.env.DB, this.sessionId), getSessionRaiders(this.env.DB, this.sessionId)]);
+    const [plans, raiders, won] = await Promise.all([
+      getPendingPlans(this.env.DB, this.sessionId),
+      getSessionRaiders(this.env.DB, this.sessionId),
+      getWonItemNames(this.env.DB, this.sessionId),
+    ]);
     const effective = new Map<number, Tier[]>();
     for (const p of plans) {
       const r = raiders.find((x) => x.id === p.raider_id);
       if (!r) continue; // no longer in the session
+      if (won.get(p.raider_id)?.has(p.item_name)) continue; // already won a copy — auto-passes, no priority weight
       const tier = demoteTier(p.tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
       let list = effective.get(p.item_id);
       if (!list) effective.set(p.item_id, (list = []));
@@ -301,6 +310,8 @@ export class SessionDO extends DurableObject<Env> {
       choices,
       choiceCount: Object.keys(choices).length,
       lastResult: null,
+      // One roll-off = one resolution run; persisted in state so it survives pauses and hibernation.
+      runId: Date.now(),
       revision: this.state.revision + 1,
       // First item waits for the admin to press "Start countdown".
       ...(await this.pausedTimer(this.itemMs())),
@@ -317,13 +328,21 @@ export class SessionDO extends DurableObject<Env> {
     // Pick the next item fresh each round: earlier wins demote pre-picks, which reshuffles the
     // priority order. Terminates because every resolution sets resolved_at. Results land in D1;
     // the revision bump makes clients refetch and see them on the Loot / Raiders cards.
+    const runId = Date.now(); // one instant batch = one resolution run
     for (;;) {
       const itemId = (await this.orderedPending())[0];
       if (itemId == null) break;
       const choices = await this.prefilledChoices(itemId);
-      await this.resolveOne(itemId, choices, 'batch');
+      await this.resolveOne(itemId, choices, 'batch', runId);
     }
-    await this.save({ lastResult: null, lockedIn: [], revision: this.state.revision + 1 });
+    // Everything is resolved and in D1 before this broadcast, so the 5s countdown that
+    // clients run off revealAt is pure suspense — their revision refetch already has the loot.
+    await this.save({
+      lastResult: null,
+      lockedIn: [],
+      batchReveal: { runId, revealAt: Date.now() + 5000 },
+      revision: this.state.revision + 1,
+    });
   }
 
   private itemMs() {
@@ -336,14 +355,19 @@ export class SessionDO extends DurableObject<Env> {
   /**
    * Raiders' pre-planned choices for an item, demoted to what they can still afford:
    * Dibs -> Need if their Dibs is spent, Need -> Equip if their need is spent.
+   * A raider who already won a copy of this item is prefilled as Pass instead.
    */
   private async prefilledChoices(itemId: number): Promise<Record<number, Tier>> {
-    const [plans, raiders] = await Promise.all([getPlansForItem(this.env.DB, itemId), getSessionRaiders(this.env.DB, this.sessionId)]);
+    const [plans, raiders, wonCopy] = await Promise.all([
+      getPlansForItem(this.env.DB, itemId),
+      getSessionRaiders(this.env.DB, this.sessionId),
+      getRaidersWhoWonCopy(this.env.DB, itemId),
+    ]);
     const out: Record<number, Tier> = {};
     for (const [idStr, tier] of Object.entries(plans)) {
       const r = raiders.find((x) => x.id === Number(idStr));
       if (!r) continue;
-      out[r.id] = demoteTier(tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
+      out[r.id] = wonCopy.has(r.id) ? 'pass' : demoteTier(tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
     }
     return out;
   }
@@ -357,6 +381,12 @@ export class SessionDO extends DurableObject<Env> {
       if (tier === 'dibs' && !canDibs(me)) {
         throw new Error(me.dibs_remaining <= 0 ? 'No Dibs charges left this season' : 'Dibs requires an available Need charge');
       }
+      if (tier !== 'pass') {
+        const itemId = this.state.itemIds[this.state.currentIndex];
+        if (itemId != null && (await getRaidersWhoWonCopy(this.env.DB, itemId)).has(raiderId)) {
+          throw new Error("You already won this item this session — you're auto-passed on this copy");
+        }
+      }
     }
     const choices = { ...this.state.choices };
     if (tier) choices[raiderId] = tier;
@@ -365,7 +395,7 @@ export class SessionDO extends DurableObject<Env> {
   }
 
   private async resolveCurrent() {
-    const lastResult = await this.resolveOne(this.state.itemIds[this.state.currentIndex], this.state.choices, 'live');
+    const lastResult = await this.resolveOne(this.state.itemIds[this.state.currentIndex], this.state.choices, 'live', this.state.runId);
     // Re-derive the remaining order: this win may have demoted the winner's later pre-picks.
     // Keep the resolved prefix, and keep the roll-off scoped to its starting snapshot (loot
     // added mid-roll-off stays out; an item awarded manually mid-roll-off drops out).
@@ -384,18 +414,20 @@ export class SessionDO extends DurableObject<Env> {
   }
 
   /** Roll one item for the given choices, persist the outcome, and describe it. */
-  private async resolveOne(itemId: number, choices: Record<number, Tier>, mode: ResolveMode): Promise<ItemResult> {
+  private async resolveOne(itemId: number, choices: Record<number, Tier>, mode: ResolveMode, runId: number | null): Promise<ItemResult> {
     const item = await getItemWithBoss(this.env.DB, itemId);
     const raiders = await getSessionRaiders(this.env.DB, this.sessionId);
     // Original pre-picks, kept in the record so the summary can show pick → counted-as.
     const picked = await getPlansForItem(this.env.DB, itemId);
+    // One win per copy: whoever already won an item with this name is force-passed here.
+    const wonCopy = await getRaidersWhoWonCopy(this.env.DB, itemId);
 
     const participants: Participant[] = [];
     for (const [idStr, tier] of Object.entries(choices)) {
       const r = raiders.find((x) => x.id === Number(idStr));
       if (!r) continue;
       // Re-validate eligibility at resolution time.
-      const t = demoteTier(tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
+      const t = wonCopy.has(r.id) ? 'pass' : demoteTier(tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
       participants.push({ id: r.id, username: r.username, itemLevel: r.item_level, tier: t });
     }
 
@@ -408,6 +440,7 @@ export class SessionDO extends DurableObject<Env> {
       winnerId: res.winnerId,
       winTier: res.winTier,
       mode,
+      runId,
       entries: res.entries.map((e) => ({ raiderId: e.raiderId, tier: e.tier!, pickedTier: picked[e.raiderId] ?? null, roll: e.roll, won: e.won })),
     });
 
@@ -437,6 +470,7 @@ export class SessionDO extends DurableObject<Env> {
         paused: false,
         pausedRemainingMs: null,
         readyRaiderIds: [],
+        runId: null,
         revision: this.state.revision + 1,
       });
       return;

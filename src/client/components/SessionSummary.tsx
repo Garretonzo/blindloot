@@ -8,7 +8,7 @@ import { TierBadge } from './TierBadge';
 import { Icon } from './Icon';
 import { ItemTooltip } from './ItemTooltip';
 
-const MODE: Record<string, { color: string; label: string }> = {
+export const MODE: Record<string, { color: string; label: string }> = {
   batch: { color: 'grape', label: 'batch' },
   live: { color: 'teal', label: 'live' },
   award: { color: 'gray', label: 'awarded' },

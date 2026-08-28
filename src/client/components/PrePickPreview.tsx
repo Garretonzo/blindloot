@@ -35,8 +35,12 @@ export function PrePickPreview({ bosses, raiders, plans, lockedIn, raidId }: Pro
 
   const pick = (p: PlanPreview) => {
     const demoted = p.effectiveTier !== p.tier;
+    const hint =
+      p.effectiveTier === 'pass'
+        ? 'Already won a copy of this item — will auto-pass'
+        : `Already spent ${TIER_LABEL[p.tier]} — counts as ${TIER_LABEL[p.effectiveTier]}`;
     return (
-      <Group gap={4} wrap="nowrap" key={p.raiderId} title={demoted ? `Already spent ${TIER_LABEL[p.tier]} — counts as ${TIER_LABEL[p.effectiveTier]}` : undefined}>
+      <Group gap={4} wrap="nowrap" key={p.raiderId} title={demoted ? hint : undefined}>
         <Text size="xs" fw={600}>
           {p.username}
         </Text>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { orderItemsByPriority, resolveItem, rankByTier, explainResult, Participant, WinCounts } from './resolve';
-import { Tier } from './types';
+import { hasWonCopy, Tier } from './types';
 
 const p = (id: number, tier: Participant['tier'], itemLevel = 600): Participant => ({
   id,
@@ -69,6 +69,44 @@ describe('resolveItem', () => {
   it('same tier: highest roll wins', () => {
     const r = resolveItem([p(1, 'equip'), p(2, 'equip'), p(3, 'equip')], seq(50, 99, 1));
     expect(r.winnerId).toBe(2);
+  });
+
+  // One win per copy: a raider who already won a copy of the item is force-passed by the
+  // caller (resolveOne) before resolution — even a high roll then never wins the duplicate.
+  it('force-passed duplicate winner never takes the second copy', () => {
+    const r = resolveItem([p(1, 'pass'), p(2, 'equip')], seq(99, 1));
+    expect(r.winnerId).toBe(2);
+    const alone = resolveItem([p(1, 'pass')]);
+    expect(alone.winnerId).toBeNull();
+  });
+});
+
+describe('hasWonCopy', () => {
+  const bosses = [
+    {
+      items: [
+        { id: 1, name: 'Sword of Testing', winner_raider_id: 7 },
+        { id: 2, name: 'Sword of Testing', winner_raider_id: null },
+        { id: 3, name: 'Shield of Testing', winner_raider_id: 9 },
+      ],
+    },
+    { items: [{ id: 4, name: 'Sword of Testing', winner_raider_id: null }] },
+  ];
+
+  it('true when the raider won a different item with the same name', () => {
+    expect(hasWonCopy(bosses, 7, { id: 2, name: 'Sword of Testing' })).toBe(true);
+    // Also across bosses.
+    expect(hasWonCopy(bosses, 7, { id: 4, name: 'Sword of Testing' })).toBe(true);
+  });
+
+  it('false for the won item itself (re-award never trips the rule)', () => {
+    expect(hasWonCopy(bosses, 7, { id: 1, name: 'Sword of Testing' })).toBe(false);
+  });
+
+  it('false for other raiders, other names, and unwon copies', () => {
+    expect(hasWonCopy(bosses, 9, { id: 2, name: 'Sword of Testing' })).toBe(false);
+    expect(hasWonCopy(bosses, 7, { id: 3, name: 'Shield of Testing' })).toBe(false);
+    expect(hasWonCopy([{ items: [{ id: 2, name: 'Sword of Testing', winner_raider_id: null }] }], 7, { id: 5, name: 'Sword of Testing' })).toBe(false);
   });
 });
 

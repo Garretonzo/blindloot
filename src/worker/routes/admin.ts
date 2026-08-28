@@ -17,8 +17,10 @@ import {
   validateSnapshot,
 } from '../backup';
 import {
+  getRaidersWhoWonCopy,
   getSessionDetail,
   getSessionRolls,
+  getWonItemNames,
   joinSession,
   LAST_ILVL_SQL,
   raiderEligibility,
@@ -430,15 +432,21 @@ adminRoutes.get('/sessions/:id/plans', async (c) => {
   const db = c.env.DB;
   const rows = await db
     .prepare(
-      `SELECT p.item_id, p.raider_id, r.username, p.tier FROM plans p
+      `SELECT p.item_id, i.name AS item_name, p.raider_id, r.username, p.tier FROM plans p
        JOIN items i ON i.id = p.item_id JOIN raiders r ON r.id = p.raider_id
        WHERE p.session_id = ? AND i.resolved_at IS NULL ORDER BY p.item_id, r.username COLLATE NOCASE`,
     )
     .bind(sessionId)
-    .all<{ item_id: number; raider_id: number; username: string; tier: Tier }>();
+    .all<{ item_id: number; item_name: string; raider_id: number; username: string; tier: Tier }>();
+  const won = await getWonItemNames(db, sessionId);
   const elig = new Map<number, { needAvailable: boolean; canDibs: boolean }>();
   const out: Record<number, { raiderId: number; username: string; tier: Tier; effectiveTier: Tier }[]> = {};
   for (const p of rows.results) {
+    // One win per copy: a pick on a duplicate of an item the raider already won counts as Pass.
+    if (won.get(p.raider_id)?.has(p.item_name)) {
+      (out[p.item_id] ??= []).push({ raiderId: p.raider_id, username: p.username, tier: p.tier, effectiveTier: 'pass' });
+      continue;
+    }
     let e = elig.get(p.raider_id);
     if (!e) {
       e = await raiderEligibility(db, sessionId, p.raider_id, 0);
@@ -470,11 +478,26 @@ adminRoutes.get('/sessions/:id/plans-summary', async (c) => {
 adminRoutes.get('/sessions/:id/rolls', async (c) => {
   const sessionId = Number(c.req.param('id'));
   const rolls = await getSessionRolls(c.env.DB, sessionId);
+  // For the one-win-per-copy rule: every session item's name and winner.
+  const sessionItems = await c.env.DB.prepare(
+    'SELECT i.id, i.name, i.winner_raider_id FROM items i JOIN bosses b ON b.id = i.boss_id WHERE b.session_id = ?',
+  )
+    .bind(sessionId)
+    .all<{ id: number; name: string; winner_raider_id: number | null }>();
+  const itemName = new Map(sessionItems.results.map((i) => [i.id, i.name]));
+  const wonCopy = (itemId: number, raiderId: number) =>
+    sessionItems.results.some((i) => i.id !== itemId && i.winner_raider_id === raiderId && i.name === itemName.get(itemId));
   // Annotate each roll with what it would count as today (runner-ups may have won Need/Dibs since).
   const cache = new Map<string, { needAvailable: boolean; canDibs: boolean }>();
   for (const [itemIdStr, entries] of Object.entries(rolls)) {
     const itemId = Number(itemIdStr);
     for (const e of entries) {
+      // Won another copy of this item: any tier would count as Pass today.
+      if (e.tier && e.tier !== 'pass' && wonCopy(itemId, e.raiderId)) {
+        e.effectiveTier = 'pass';
+        e.ineligible = true;
+        continue;
+      }
       if (!e.tier || (e.tier !== 'need' && e.tier !== 'dibs')) {
         e.effectiveTier = e.tier;
         e.ineligible = false;
@@ -502,8 +525,11 @@ adminRoutes.post('/sessions/:id/items/:itemId/award', async (c) => {
   let tier: Tier | null = raiderId != null ? body.tier ?? 'greed' : null;
   const db = c.env.DB;
   // Unless the admin explicitly forces it, a Need/Dibs award is demoted if the raider has
-  // already won with Need/Dibs elsewhere (ignoring this item, whose winner is being replaced).
+  // already won with Need/Dibs elsewhere (ignoring this item, whose winner is being replaced),
+  // and awarding a second copy of an item the raider already won is rejected outright.
   if (raiderId != null && tier && !body.force) {
+    if ((await getRaidersWhoWonCopy(db, itemId)).has(raiderId))
+      return c.json({ error: 'Already won a copy of this item this session — confirm to award anyway' }, 409);
     tier = demoteTier(tier, await raiderEligibility(db, sessionId, raiderId, itemId));
   }
 

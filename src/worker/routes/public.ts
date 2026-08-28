@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { AppEnv } from '../env';
-import { getSessionDetail, getSessionRaiders, getWinnerPickedTiers, joinSession, LAST_ILVL_SQL } from '../db';
+import { getRaidersWhoWonCopy, getSessionDetail, getSessionRaiders, getWinnerPickedTiers, joinSession, LAST_ILVL_SQL } from '../db';
 import { hashPassword, hasSiteAccess, isAdmin, requireSite, setSiteCookie, siteGateEnabled, verifyPassword } from '../auth';
 import { checkLogin, createLogin, deleteLogin, notifySession, presenceStub, raiderForToken, sessionStub } from '../session';
 import { canDibs, Tier, TIER_RANK } from '../../shared/types';
@@ -97,6 +97,8 @@ publicRoutes.put('/sessions/:id/plans', async (c) => {
 
   const me = (await getSessionRaiders(db, sessionId)).find((r) => r.id === raiderId);
   if (!me) return c.json({ error: 'not in this session' }, 403);
+  if (tier && tier !== 'pass' && (await getRaidersWhoWonCopy(db, itemId)).has(raiderId))
+    return c.json({ error: 'You already won this item this session — duplicate copies are auto-passed' }, 409);
   if (tier === 'need' && me.need_remaining <= 0) return c.json({ error: 'No Need charges left this session' }, 409);
   if (tier === 'dibs' && !canDibs(me))
     return c.json({ error: me.dibs_remaining <= 0 ? 'No Dibs charges left this season' : 'Dibs requires an available Need charge' }, 409);

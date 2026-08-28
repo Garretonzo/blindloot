@@ -91,6 +91,10 @@ export interface Item {
   /** Hidden (null) from raiders, except on items the viewer won themselves. */
   win_tier: Tier | null;
   resolved_at: number | null;
+  /** How the item got resolved (was always sent over the wire via SELECT i.*, now typed). */
+  resolved_mode: 'batch' | 'live' | 'award' | null;
+  /** Resolution run that resolved this item: ms timestamp of the run's start. NULL = manual award or pre-column data. */
+  resolve_run: number | null;
   /** Raider view only: the viewer's recorded pre-pick on an item they won (null = rolled live / no pre-pick). */
   my_picked_tier?: Tier | null;
 }
@@ -101,6 +105,18 @@ export interface Boss {
   icon: string | null;
   sort_order: number;
   items: Item[];
+}
+
+/**
+ * True when the raider has already won a different item with the same name in this session —
+ * duplicate copies of a won item are auto-passed (one win per item name per raider).
+ */
+export function hasWonCopy(
+  bosses: { items: Pick<Item, 'id' | 'name' | 'winner_raider_id'>[] }[],
+  raiderId: number,
+  item: Pick<Item, 'id' | 'name'>,
+): boolean {
+  return bosses.some((b) => b.items.some((i) => i.name === item.name && i.id !== item.id && i.winner_raider_id === raiderId));
 }
 
 /** Bundled static raid data (see scripts/fetch-loot-data.mjs). */
@@ -205,6 +221,13 @@ export interface LiveState {
   lastResult: ItemResult | null;
   /** Smart item order (priority + random ties) for roll-offs and batches; false = plain list order. */
   shuffle: boolean;
+  /** The live roll-off's resolution-run id (ms timestamp of its start); null outside a roll-off. */
+  runId: number | null;
+  /**
+   * Set when an instant batch finishes: joined raiders run the countdown + present-reveal
+   * spectacle. Never cleared except by reset — clients ignore stale reveals via revealAt.
+   */
+  batchReveal: { runId: number; revealAt: number } | null;
   /** Raiders who've said they're happy with their pre-picks (cleared when loot changes or a batch runs). */
   lockedIn: number[];
   /** bump to tell clients to refetch session detail */

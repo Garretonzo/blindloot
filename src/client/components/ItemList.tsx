@@ -2,7 +2,7 @@ import { ActionIcon, Anchor, Autocomplete, Badge, Button, Group, Popover, Stack,
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IconSkull } from '@tabler/icons-react';
-import { Boss, canDibs, Item, LiveState, Raider, RaidItem, RollEntry, Tier, TIERS, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
+import { Boss, canDibs, hasWonCopy, Item, LiveState, Raider, RaidItem, RollEntry, Tier, TIERS, TIER_COLOR, TIER_HINT, TIER_LABEL } from '../../shared/types';
 import { rankByTier } from '../../shared/resolve';
 import { findBoss, lootFor } from '../../shared/raids';
 import { ItemTooltip } from './ItemTooltip';
@@ -113,8 +113,17 @@ export function ItemList({ bosses, raiders, live, raidId, showTiers, rolls, onAw
                           nobody
                         </Text>
                       )}
-                      {resolved && onAward && !isCurrent && <AwardDetails item={i} raiders={raiders} entries={rolls?.[i.id] ?? []} onAward={onAward} />}
-                      {!resolved && !isCurrent && me && onPlan && <PlanButtons me={me} plan={plans?.[i.id] ?? null} onPlan={(t) => onPlan(i.id, t)} />}
+                      {resolved && onAward && !isCurrent && (
+                        <AwardDetails item={i} raiders={raiders} entries={rolls?.[i.id] ?? []} onAward={onAward} wonCopy={(rid) => hasWonCopy(bosses, rid, i)} />
+                      )}
+                      {!resolved && !isCurrent && me && onPlan &&
+                        (hasWonCopy(bosses, me.id, i) ? (
+                          <Text size="xs" c="dimmed" title="One win per item: duplicates of an item you won are auto-passed">
+                            You won a copy — auto-passed
+                          </Text>
+                        ) : (
+                          <PlanButtons me={me} plan={plans?.[i.id] ?? null} onPlan={(t) => onPlan(i.id, t)} />
+                        ))}
                       {onDeleteItem && !resolved && (
                         <ActionIcon variant="subtle" color="gray" size="sm" onClick={() => onDeleteItem(i.id)} title="Remove item">
                           ×
@@ -174,11 +183,14 @@ function AwardDetails({
   raiders,
   entries,
   onAward,
+  wonCopy,
 }: {
   item: Item;
   raiders: Raider[];
   entries: RollEntry[];
   onAward: (itemId: number, raiderId: number | null, tier: Tier | null, force?: boolean) => void;
+  /** One-win-per-copy rule: has this raider already won another item with this name? */
+  wonCopy: (raiderId: number) => boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [giveTo, setGiveTo] = useState<number | null>(null);
@@ -189,9 +201,15 @@ function AwardDetails({
 
   /**
    * Award at a Need/Dibs tier only after confirming — the server would otherwise demote it if the
-   * raider has already won with Need/Dibs elsewhere. Confirming sends force=true.
+   * raider has already won with Need/Dibs elsewhere. Confirming sends force=true. A raider who
+   * already won a copy of this item is confirmed (and forced) too — the server rejects otherwise.
    */
   const awardWithCheck = (raiderId: number, t: Tier) => {
+    if (wonCopy(raiderId)) {
+      if (!confirm('They already won a copy of this item this session. Give anyway?')) return;
+      onAward(item.id, raiderId, t, true);
+      return;
+    }
     if (t === 'need' || t === 'dibs') {
       const ok = confirm(
         `Give as ${TIER_LABEL[t]}? If they've already won with Need/Dibs this session it normally counts one tier lower. OK = count it as ${TIER_LABEL[t]} regardless, Cancel = let the rules decide.`,
@@ -261,7 +279,15 @@ function AwardDetails({
                               {t === 'dibs' ? ` · ilvl ${e.itemLevel}` : ''}
                             </Text>
                             {demoted && (
-                              <Group gap={4} wrap="nowrap" title={`Has won with Need/Dibs since this roll — now counts as ${TIER_LABEL[effective]}`}>
+                              <Group
+                                gap={4}
+                                wrap="nowrap"
+                                title={
+                                  effective === 'pass'
+                                    ? 'Already won a copy of this item — auto-passes'
+                                    : `Has won with Need/Dibs since this roll — now counts as ${TIER_LABEL[effective]}`
+                                }
+                              >
                                 <Text size="xs" c="yellow.4">
                                   → now
                                 </Text>
@@ -270,7 +296,15 @@ function AwardDetails({
                             )}
                           </Group>
                           {item.winner_raider_id !== e.raiderId && (
-                            <Button size="compact-xs" variant="default" onClick={() => onAward(item.id, e.raiderId, effective)} title={`Give as ${TIER_LABEL[effective]}`}>
+                            <Button
+                              size="compact-xs"
+                              variant="default"
+                              // A runner-up who already won a copy is given at their rolled tier, after confirm (forced).
+                              onClick={() =>
+                                wonCopy(e.raiderId) ? awardWithCheck(e.raiderId, effective === 'pass' ? t : effective) : onAward(item.id, e.raiderId, effective)
+                              }
+                              title={`Give as ${TIER_LABEL[effective === 'pass' ? t : effective]}`}
+                            >
                               Give
                             </Button>
                           )}

@@ -56,3 +56,143 @@ body {
 .blink {
   animation: blink 1.2s ease-in-out infinite;
 }
+
+/* ---- Instant batch spectacle: countdown -> explosion -> present -> reveal ---- */
+
+/* Fullscreen stage. Sits above the AppShell header (z-index 100). */
+@keyframes spectacle-glow {
+  0%,
+  100% {
+    background-position: 0% 0%, 100% 100%;
+  }
+  50% {
+    background-position: 20% 10%, 80% 90%;
+  }
+}
+.spectacle-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background:
+    radial-gradient(900px 600px at 20% 15%, rgba(18, 184, 134, 0.22), transparent 60%),
+    radial-gradient(900px 600px at 80% 85%, rgba(190, 75, 219, 0.18), transparent 60%),
+    rgba(8, 10, 14, 0.96);
+  animation: spectacle-glow 3s ease-in-out infinite;
+}
+
+/* Explosion screen shake. */
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-8px, 5px); }
+  20% { transform: translate(7px, -6px); }
+  30% { transform: translate(-6px, -4px); }
+  40% { transform: translate(8px, 6px); }
+  50% { transform: translate(-7px, 3px); }
+  60% { transform: translate(5px, -7px); }
+  70% { transform: translate(-4px, 6px); }
+  80% { transform: translate(6px, -3px); }
+  90% { transform: translate(-5px, -5px); }
+}
+.spectacle-shake {
+  animation: shake 0.5s linear;
+}
+
+/* Giant countdown digit: slams in from huge and blurry, once per digit (remounted via key). */
+@keyframes spectacle-zoom {
+  0% {
+    transform: scale(2.6);
+    opacity: 0;
+    filter: blur(10px);
+  }
+  55% {
+    transform: scale(0.94);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.spectacle-num {
+  font-size: clamp(6rem, 22vh, 15rem);
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(90deg, var(--mantine-color-teal-3), var(--mantine-color-cyan-3), var(--mantine-color-grape-4));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: spectacle-zoom 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.spectacle-hype {
+  font-size: clamp(1rem, 3.2vh, 1.6rem);
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--mantine-color-teal-2);
+  text-shadow: 0 0 18px rgba(18, 184, 134, 0.8);
+}
+
+/* Confetti pieces: per-piece left/color/delay/duration come from inline styles. */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-6vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(112vh) rotate(720deg);
+    opacity: 0.6;
+  }
+}
+.confetti-piece {
+  position: absolute;
+  top: -6vh;
+  border-radius: 2px;
+  animation: confetti-fall linear both;
+  pointer-events: none;
+}
+
+/* The present. Wobbles harder with every click. */
+.present {
+  font-size: clamp(7rem, 24vh, 13rem);
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transform-origin: 50% 90%;
+}
+@keyframes wobble-1 {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+@keyframes wobble-2 {
+  0%, 100% { transform: rotate(-5deg) scale(1.03); }
+  50% { transform: rotate(5deg) scale(1.03); }
+}
+@keyframes wobble-3 {
+  0%, 100% { transform: rotate(-9deg) scale(1.08); }
+  50% { transform: rotate(9deg) scale(1.08); }
+}
+.wobble-1 { animation: wobble-1 0.5s ease-in-out infinite; }
+.wobble-2 { animation: wobble-2 0.35s ease-in-out infinite; }
+.wobble-3 { animation: wobble-3 0.22s ease-in-out infinite; }
+
+/* Wrapping tiers. */
+.present-gold {
+  filter: drop-shadow(0 0 40px rgba(255, 200, 50, 0.85)) drop-shadow(0 0 90px rgba(255, 170, 30, 0.45));
+}
+.present-teal {
+  filter: drop-shadow(0 0 32px rgba(18, 184, 134, 0.75));
+}
+.present-soggy {
+  filter: saturate(0.4) brightness(0.75) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+}
+
+/* WoW Poor-quality gray for consolation junk. */
+.poor-quality {
+  color: #9d9d9d;
+}

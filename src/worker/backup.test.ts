@@ -106,6 +106,15 @@ describe('validateSnapshot', () => {
     expect(() => validateSnapshot(snap)).not.toThrow();
   });
 
+  it('accepts an old snapshot missing an optional column (pre-resolve_run items)', () => {
+    const snap = emptySnapshot();
+    snap.tables.items.push({
+      id: 1, boss_id: 1, name: 'Old Sword', icon: null, sort_order: 1,
+      winner_raider_id: null, win_tier: null, resolved_at: 5, resolved_mode: 'batch',
+    } as never);
+    expect(() => validateSnapshot(snap)).not.toThrow();
+  });
+
   it('accepts a raider row with an avatar data URL', () => {
     const snap = emptySnapshot();
     snap.tables.raiders.push({ id: 1, username: 'new', created_at: 5, password_hash: null, avatar: 'data:image/webp;base64,AAAA' });

@@ -14,6 +14,7 @@ import { ItemList } from '../components/ItemList';
 import { RaiderTable } from '../components/RaiderTable';
 import { RollPanel } from '../components/RollPanel';
 import { BossForm } from '../components/BossForm';
+import { BatchResults } from '../components/BatchResults';
 
 /** Add a raider from the site-wide roster to this session, with this session's item level. */
 function AddRaiderRow({ inSession, onAdd }: { inSession: number[]; onAdd: (raiderId: number, itemLevel: number) => Promise<unknown> }) {
@@ -245,6 +246,8 @@ export function AdminSessionPage() {
       </SectionCard>
 
       {summary.length > 0 && <SessionSummary items={summary} raidId={detail.season.raid_id} />}
+
+      <BatchResults bosses={detail.bosses} raiders={detail.raiders} raidId={detail.season.raid_id} admin />
 
       {(phase === 'open' || phase === 'ready') && (
         <PrePickPreview bosses={detail.bosses} raiders={detail.raiders} plans={plans} lockedIn={live?.lockedIn ?? []} raidId={detail.season.raid_id} />

@@ -98,6 +98,8 @@ export interface PersistResult {
   winnerId: number | null;
   winTier: Tier | null;
   mode: ResolveMode;
+  /** Resolution run this item belongs to (ms timestamp of the run's start); null for manual awards. */
+  runId: number | null;
   entries: { raiderId: number; tier: Tier; pickedTier: Tier | null; roll: number | null; won: boolean }[];
 }
 
@@ -105,8 +107,8 @@ export async function persistResult(db: D1Database, sessionId: number, r: Persis
   const now = Date.now();
   const stmts: D1PreparedStatement[] = [
     db
-      .prepare('UPDATE items SET winner_raider_id = ?, win_tier = ?, resolved_at = ?, resolved_mode = ? WHERE id = ?')
-      .bind(r.winnerId, r.winTier, now, r.mode, r.itemId),
+      .prepare('UPDATE items SET winner_raider_id = ?, win_tier = ?, resolved_at = ?, resolved_mode = ?, resolve_run = ? WHERE id = ?')
+      .bind(r.winnerId, r.winTier, now, r.mode, r.runId, r.itemId),
   ];
   for (const e of r.entries) {
     stmts.push(
@@ -126,16 +128,57 @@ export async function persistResult(db: D1Database, sessionId: number, r: Persis
 }
 
 /** All pre-picks for a session's unresolved items, one row per (item, raider). */
-export async function getPendingPlans(db: D1Database, sessionId: number): Promise<{ item_id: number; raider_id: number; tier: Tier }[]> {
+export async function getPendingPlans(
+  db: D1Database,
+  sessionId: number,
+): Promise<{ item_id: number; item_name: string; raider_id: number; tier: Tier }[]> {
   const rows = await db
     .prepare(
-      `SELECT p.item_id, p.raider_id, p.tier FROM plans p
+      `SELECT p.item_id, i.name AS item_name, p.raider_id, p.tier FROM plans p
        JOIN items i ON i.id = p.item_id
        WHERE p.session_id = ? AND i.resolved_at IS NULL`,
     )
     .bind(sessionId)
-    .all<{ item_id: number; raider_id: number; tier: Tier }>();
+    .all<{ item_id: number; item_name: string; raider_id: number; tier: Tier }>();
   return rows.results;
+}
+
+/**
+ * Ids of raiders who have already won ANOTHER item with the same name as `itemId` in its session.
+ * One win per copy: these raiders are auto-passed on this copy. Derived from recorded wins (never
+ * stored), so admin un-award/re-award self-heals just like charge recomputation.
+ */
+export async function getRaidersWhoWonCopy(db: D1Database, itemId: number): Promise<Set<number>> {
+  const rows = await db
+    .prepare(
+      `SELECT DISTINCT w.winner_raider_id AS raider_id
+       FROM items i JOIN bosses b ON b.id = i.boss_id
+       JOIN bosses wb ON wb.session_id = b.session_id
+       JOIN items w ON w.boss_id = wb.id
+       WHERE i.id = ?1 AND w.id != ?1 AND w.name = i.name AND w.winner_raider_id IS NOT NULL`,
+    )
+    .bind(itemId)
+    .all<{ raider_id: number }>();
+  return new Set(rows.results.map((r) => r.raider_id));
+}
+
+/** raiderId -> item names already won in this session (for the one-win-per-copy rule). */
+export async function getWonItemNames(db: D1Database, sessionId: number): Promise<Map<number, Set<string>>> {
+  const rows = await db
+    .prepare(
+      `SELECT i.winner_raider_id AS raider_id, i.name FROM items i
+       JOIN bosses b ON b.id = i.boss_id
+       WHERE b.session_id = ? AND i.winner_raider_id IS NOT NULL`,
+    )
+    .bind(sessionId)
+    .all<{ raider_id: number; name: string }>();
+  const out = new Map<number, Set<string>>();
+  for (const r of rows.results) {
+    let set = out.get(r.raider_id);
+    if (!set) out.set(r.raider_id, (set = new Set()));
+    set.add(r.name);
+  }
+  return out;
 }
 
 /**

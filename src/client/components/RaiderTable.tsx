@@ -94,7 +94,7 @@ export function RaiderTable({ raiders, readyIds, lockedIn, meId, editable, bosse
  * on their own wins (the server strips it otherwise), so the tier badge shows exactly where
  * it's allowed to.
  */
-function LootRow({ item, bossName, raidId }: { item: Item; bossName: string; raidId?: string }) {
+export function LootRow({ item, bossName, raidId }: { item: Item; bossName: string; raidId?: string }) {
   return (
     <Group justify="space-between" wrap="nowrap">
       <Group gap="xs" wrap="nowrap">

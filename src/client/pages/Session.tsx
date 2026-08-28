@@ -11,6 +11,8 @@ import { ItemList } from '../components/ItemList';
 import { RaiderTable } from '../components/RaiderTable';
 import { RollPanel } from '../components/RollPanel';
 import { LockInBar, LOCK_IN_BAR_HEIGHT } from '../components/LockInBar';
+import { BatchResults } from '../components/BatchResults';
+import { BatchSpectacle } from '../components/BatchSpectacle';
 
 export function SessionPage() {
   const sessionId = Number(useParams().sessionId);
@@ -57,6 +59,9 @@ export function SessionPage() {
 
   return (
     <Stack gap="lg" pb={showLockInBar ? LOCK_IN_BAR_HEIGHT : undefined}>
+      {/* Fullscreen instant-batch countdown + present reveal; renders via a Portal. Joined raiders only. */}
+      {me && <BatchSpectacle reveal={live?.batchReveal ?? null} me={me} detail={detail} raidId={detail.season.raid_id} />}
+
       <Group justify="space-between">
         <div>
           <Text size="xs" c="dimmed">
@@ -118,6 +123,8 @@ export function SessionPage() {
           onReady={() => send({ type: 'ready' })}
         />
       )}
+
+      <BatchResults bosses={detail.bosses} raiders={detail.raiders} raidId={detail.season.raid_id} meId={me?.id} />
 
       <SectionCard title="Loot" collapsible>
         <Alert variant="light" color="orange" mb="md">
