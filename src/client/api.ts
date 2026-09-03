@@ -1,4 +1,6 @@
-import { RollEntry, Season, Session, SessionDetail, Tier } from '../shared/types';
+import { PlanPreviewView, RollEntry, Season, Session, SessionDetail, Tier } from '../shared/types';
+
+export type { PlanPreview, PlanPreviewView } from '../shared/types';
 
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
@@ -86,9 +88,8 @@ export const api = {
     deleteItem: (sessionId: number, itemId: number) =>
       req('DELETE', `/api/admin/sessions/${sessionId}/items/${itemId}`),
     rolls: (sessionId: number) => req<Record<number, RollEntry[]>>('GET', `/api/admin/sessions/${sessionId}/rolls`),
-    plans: (sessionId: number) => req<Record<number, PlanPreview[]>>('GET', `/api/admin/sessions/${sessionId}/plans`),
-    plansSummary: (sessionId: number) =>
-      req<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number }>('GET', `/api/admin/sessions/${sessionId}/plans-summary`),
+    /** The pre-pick preview (picks per item + per-raider counts), cached in the session DO per plansRevision. */
+    plans: (sessionId: number) => req<PlanPreviewView>('GET', `/api/admin/sessions/${sessionId}/plans`),
     award: (sessionId: number, itemId: number, raiderId: number | null, tier: Tier | null, force = false) =>
       req<{ ok: true; tier: Tier | null }>('POST', `/api/admin/sessions/${sessionId}/items/${itemId}/award`, { raiderId, tier, force }),
     deleteBoss: (sessionId: number, bossId: number) =>
@@ -145,14 +146,6 @@ export interface BackupMeta {
   kind: 'manual' | 'pre-restore' | 'pre-import';
   created_at: number;
   bytes: number;
-}
-
-export interface PlanPreview {
-  raiderId: number;
-  username: string;
-  tier: Tier;
-  /** What the pick will count as today (demoted if the raider already spent Need/Dibs). */
-  effectiveTier: Tier;
 }
 
 export interface RosterRaider {

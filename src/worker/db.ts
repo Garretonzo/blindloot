@@ -1,4 +1,4 @@
-import { Boss, Item, Raider, RollEntry, Season, Session, SessionDetail, Tier } from '../shared/types';
+import { Boss, canDibs, demoteTier, Item, PlanPreview, PlanPreviewView, Raider, RollEntry, Season, Session, SessionDetail, Tier } from '../shared/types';
 import { WinCounts } from '../shared/resolve';
 
 export async function getSessionDetail(db: D1Database, sessionId: number): Promise<SessionDetail | null> {
@@ -192,6 +192,51 @@ export function wonItemNamesFrom(items: { name: string; winner_raider_id: number
     set.add(i.name);
   }
   return out;
+}
+
+/** Every pre-pick row of a session, bare (≈ one row read per plan; the names and counters come from the cached detail). */
+export async function getSessionPlanRows(db: D1Database, sessionId: number): Promise<{ item_id: number; raider_id: number; tier: Tier }[]> {
+  const rows = await db
+    .prepare('SELECT item_id, raider_id, tier FROM plans WHERE session_id = ?')
+    .bind(sessionId)
+    .all<{ item_id: number; raider_id: number; tier: Tier }>();
+  return rows.results;
+}
+
+/**
+ * The admin pre-pick preview, built from the session detail plus its bare plan rows. Demotion
+ * uses the raiders' stored charge counters — exactly what `prefilledChoices` applies at batch
+ * time (admin overrides included). Rows on resolved / unknown items and rows from raiders no
+ * longer in the session are dropped: the batch would skip them too.
+ */
+export function buildPlanPreview(
+  detail: SessionDetail,
+  rows: { item_id: number; raider_id: number; tier: Tier }[],
+  plansRevision: number,
+): PlanPreviewView {
+  const allItems = detail.bosses.flatMap((b) => b.items);
+  const unresolved = new Map(allItems.filter((i) => i.resolved_at == null).map((i) => [i.id, i]));
+  const raiders = new Map(detail.raiders.map((r) => [r.id, r]));
+  const won = wonItemNamesFrom(allItems);
+  const items: Record<number, PlanPreview[]> = {};
+  const picks = new Map<number, number>();
+  for (const p of rows) {
+    const item = unresolved.get(p.item_id);
+    const r = raiders.get(p.raider_id);
+    if (!item || !r) continue;
+    picks.set(r.id, (picks.get(r.id) ?? 0) + 1);
+    // One win per copy: a pick on a duplicate of an item the raider already won counts as Pass.
+    const effectiveTier: Tier = won.get(r.id)?.has(item.name)
+      ? 'pass'
+      : demoteTier(p.tier, { needAvailable: r.need_remaining > 0, canDibs: canDibs(r) });
+    (items[item.id] ??= []).push({ raiderId: r.id, username: r.username, tier: p.tier, effectiveTier });
+  }
+  for (const list of Object.values(items)) list.sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: 'base' }));
+  return {
+    plansRevision,
+    items,
+    summary: { raiders: [...picks].map(([raiderId, n]) => ({ raiderId, picks: n })), unresolvedItems: unresolved.size },
+  };
 }
 
 /** raiderId -> item names already won in this session (for the one-win-per-copy rule). */

@@ -3,8 +3,9 @@ import { SectionCard } from '../components/SectionCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDebouncedValue } from '@mantine/hooks';
 import { Link, useParams } from 'react-router-dom';
-import { api, PlanPreview, RosterRaider } from '../api';
+import { api, PlanPreviewView, RosterRaider } from '../api';
 import { PrePickPreview } from '../components/PrePickPreview';
 import { RollEntry, SessionDetail, SummaryItem, TIER_LABEL } from '../../shared/types';
 import { SessionSummary } from '../components/SessionSummary';
@@ -73,8 +74,7 @@ export function AdminSessionPage() {
   const sessionId = Number(useParams().sessionId);
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [rolls, setRolls] = useState<Record<number, RollEntry[]>>({});
-  const [picks, setPicks] = useState<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number } | null>(null);
-  const [plans, setPlans] = useState<Record<number, PlanPreview[]>>({});
+  const [preview, setPreview] = useState<PlanPreviewView | null>(null);
   const { state: live, connected, send } = useSessionSocket(sessionId, null, true);
 
   // Loot, roster and roll history only change with a revision bump: fetched once per revision.
@@ -86,25 +86,17 @@ export function AdminSessionPage() {
   }, [sessionId]);
   const refetchCore = useRevisionedFetch(loadCore, live?.revision, ok);
 
-  // Pre-picks change on every raider click (plansRevision) and on resolution (revision deletes
-  // them). Trailing-debounced so a burst of clicks costs one refetch, not one per click.
-  const refetchPlans = useCallback(() => {
-    api.admin.plansSummary(sessionId).then(setPicks).catch(() => {});
-    api.admin.plans(sessionId).then(setPlans).catch(() => {});
+  // The pre-pick preview follows plansRevision (which also moves with revision). Leading debounce
+  // so the first paint isn't delayed; trailing so a burst of raider clicks costs one refetch.
+  const loadPlans = useCallback(async () => {
+    const p = await api.admin.plans(sessionId);
+    setPreview(p);
+    return p.plansRevision;
   }, [sessionId]);
-  const [plansLoaded, setPlansLoaded] = useState(false);
-  useEffect(() => {
-    if (!ok) return;
-    const t = window.setTimeout(
-      () => {
-        setPlansLoaded(true);
-        refetchPlans();
-      },
-      plansLoaded ? 1000 : 0,
-    );
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ok, refetchPlans, live?.revision, live?.plansRevision]);
+  const [plansRev] = useDebouncedValue(live?.plansRevision, 1000, { leading: true });
+  const refetchPlans = useRevisionedFetch(loadPlans, plansRev, ok);
+  const plans = preview?.items ?? {};
+  const picks = preview?.summary ?? null;
 
   // The loot story is derived, not fetched: detail + roll history already carry everything.
   const summary = useMemo<SummaryItem[]>(() => (detail ? summarize(detail, rolls) : []), [detail, rolls]);
@@ -120,7 +112,7 @@ export function AdminSessionPage() {
         // explicitly when the socket is down and can't deliver that bump.
         if (!connected) {
           refetchCore(true);
-          refetchPlans();
+          refetchPlans(true);
         }
       })
       .catch((e: Error) => notifications.show({ color: 'red', message: e.message }));

@@ -1,14 +1,16 @@
 import { DurableObject } from 'cloudflare:workers';
 import { Env } from './env';
-import { canDibs, ClientMessage, demoteTier, ItemResult, LiveState, ServerMessage, Tier } from '../shared/types';
+import { canDibs, ClientMessage, demoteTier, ItemResult, LiveState, PlanPreviewView, ServerMessage, Tier } from '../shared/types';
 import { orderItemsByPriority, resolveItem, Participant } from '../shared/resolve';
 import {
+  buildPlanPreview,
   getItemWithBoss,
   getPendingItemIds,
   getPendingPlans,
   getPlansForItem,
   getRaidersWhoWonCopy,
   getSessionDetail,
+  getSessionPlanRows,
   getSessionRaider,
   getSessionRaiders,
   getSessionRolls,
@@ -29,7 +31,8 @@ const CACHE_TTL_MS = 60_000;
 interface CacheEntry<T> {
   data: T;
   json: string;
-  revision: number;
+  /** The counter (revision or plansRevision) this view was built at. */
+  version: number;
   fetchedAt: number;
 }
 const clampSeconds = (v: unknown, fallback: number) => {
@@ -126,17 +129,28 @@ export class SessionDO extends DurableObject<Env> {
     }
 
     if (url.pathname === '/detail') {
-      // Session detail as of the current revision: rebuilt from D1 once per revision, not once per browser.
-      const entry = await this.cached('detail', async (revision) => {
-        const detail = await getSessionDetail(this.env.DB, this.sessionId);
-        return detail && { ...detail, revision };
-      });
+      const entry = await this.detail();
       return entry ? new Response(entry.json, { headers: { 'content-type': 'application/json' } }) : new Response('not found', { status: 404 });
     }
 
     if (url.pathname === '/rolls') {
       const entry = await this.cached('rolls', () => getSessionRolls(this.env.DB, this.sessionId));
       return new Response(entry?.json ?? '{}', { headers: { 'content-type': 'application/json' } });
+    }
+
+    if (url.pathname === '/plans') {
+      // Admin pre-pick preview: the cached detail plus one bare plans query, rebuilt once per
+      // plansRevision (which also moves with revision) rather than on every admin refetch.
+      const entry = await this.cached<PlanPreviewView>(
+        'plans',
+        async (plansRevision) => {
+          const detail = await this.detail();
+          if (!detail) return null;
+          return buildPlanPreview(detail.data, await getSessionPlanRows(this.env.DB, this.sessionId), plansRevision);
+        },
+        () => this.state.plansRevision,
+      );
+      return entry ? new Response(entry.json, { headers: { 'content-type': 'application/json' } }) : new Response('not found', { status: 404 });
     }
 
     if (url.pathname === '/lock-in') {
@@ -579,30 +593,48 @@ export class SessionDO extends DurableObject<Env> {
   }
 
   private async save(patch: Partial<LiveState>, audience: 'all' | 'admin' = 'all') {
-    // A revision bump announces a D1 change: every cached D1 view is stale from here on.
-    if (patch.revision !== undefined && patch.revision !== this.state.revision) this.cache.clear();
+    if (patch.revision !== undefined && patch.revision !== this.state.revision) {
+      // A revision bump announces a D1 change: every cached D1 view is stale from here on. The
+      // pre-pick preview is built on the detail, so its counter moves too (max: reset() spreads
+      // initialState(), and a rewind could land on a value a client already holds).
+      this.cache.clear();
+      patch = { ...patch, plansRevision: Math.max(this.state.plansRevision, patch.plansRevision ?? 0) + 1 };
+    }
     this.state = { ...this.state, ...patch };
     await this.ctx.storage.put('state', this.state);
     this.broadcastState(audience);
   }
 
+  /** Session detail as of the current revision: rebuilt from D1 once per revision, not once per browser. */
+  private detail() {
+    return this.cached('detail', async (revision) => {
+      const detail = await getSessionDetail(this.env.DB, this.sessionId);
+      return detail && { ...detail, revision };
+    });
+  }
+
   /**
-   * Read-through cache keyed on the live revision. An entry is tagged with the revision seen
-   * BEFORE its D1 read, so a write that lands mid-read (and bumps the revision) can never be
-   * masked: the entry is simply not stored, and a client comparing revisions refetches. Concurrent
-   * misses share one D1 read; invalidation clears entries but never the in-flight promise.
+   * Read-through cache keyed on a live counter (the revision by default). An entry is tagged
+   * with the counter seen BEFORE its D1 read, so a write that lands mid-read (and bumps the
+   * counter) can never be masked: the entry is simply not stored, and a client comparing
+   * counters refetches. Concurrent misses share one D1 read; invalidation clears entries but
+   * never the in-flight promise.
    */
-  private cached<T>(key: string, loader: (revision: number) => Promise<T | null>): Promise<CacheEntry<T> | null> {
+  private cached<T>(
+    key: string,
+    loader: (version: number) => Promise<T | null>,
+    version: () => number = () => this.state.revision,
+  ): Promise<CacheEntry<T> | null> {
     const hit = this.cache.get(key) as CacheEntry<T> | undefined;
-    if (hit && hit.revision === this.state.revision && Date.now() - hit.fetchedAt < CACHE_TTL_MS) return Promise.resolve(hit);
+    if (hit && hit.version === version() && Date.now() - hit.fetchedAt < CACHE_TTL_MS) return Promise.resolve(hit);
     let p = this.inflight.get(key) as Promise<CacheEntry<T> | null> | undefined;
     if (!p) {
-      const revision = this.state.revision;
-      p = loader(revision)
+      const v = version();
+      p = loader(v)
         .then((data) => {
           if (data == null) return null;
-          const entry: CacheEntry<T> = { data, json: JSON.stringify(data), revision, fetchedAt: Date.now() };
-          if (this.state.revision === revision) this.cache.set(key, entry);
+          const entry: CacheEntry<T> = { data, json: JSON.stringify(data), version: v, fetchedAt: Date.now() };
+          if (version() === v) this.cache.set(key, entry);
           return entry;
         })
         .finally(() => {

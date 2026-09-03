@@ -47,10 +47,13 @@ npm run dev                         # http://localhost:8787
 The free plan allows 5M `rows_read` per day, and a raid night is a fan-out problem: every change
 is announced over the session's WebSocket and every open tab refetches. To keep that cheap:
 
-- Session detail and roll history are served from a **revision-keyed cache inside `SessionDO`**
-  (`/detail`, `/rolls`), so a change costs one D1 rebuild rather than one per connected browser.
-  Any D1 write that changes those views must go through a `revision` bump (`notifySession()`);
-  a 60s TTL covers the few writes that don't (avatars, renames).
+- Session detail, roll history and the admin pre-pick preview are served from a **counter-keyed
+  cache inside `SessionDO`** (`/detail`, `/rolls`, `/plans`), so a change costs one D1 rebuild
+  rather than one per connected browser. Any D1 write that changes those views must bump a
+  counter: `revision` via `notifySession()` for loot/roster/rolls, `plansRevision` via
+  `notifyPlansChanged()` for pre-picks (`plansRevision` also moves with every `revision` bump,
+  since the preview is built on the detail). A 60s TTL covers the few writes that don't
+  (avatars, renames).
 - Pre-picks are private, so `PUT /sessions/:id/plans` only bumps `plansRevision`, which reaches
   admin sockets alone. Never add a `notifySession()` to a per-click raider action.
 - Set `D1_METER=1` in `.dev.vars` (or `wrangler dev --var D1_METER:1`) to log `rows_read` per

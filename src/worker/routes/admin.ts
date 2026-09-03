@@ -26,7 +26,6 @@ import {
   recomputeSeasonResources,
   setItemLevelStatements,
   upsertRaider,
-  wonItemNamesFrom,
 } from '../db';
 import { demoteTier, RollEntry, Tier } from '../../shared/types';
 import { raidById } from '../../shared/raids';
@@ -396,46 +395,16 @@ const sessionItemsForEligibility = (db: D1Database, sessionId: number) =>
     .bind(sessionId)
     .all<{ id: number; name: string; winner_raider_id: number | null; win_tier: Tier | null }>();
 
-/** Every raider's pre-pick on every unresolved item, with what it will actually count as. Admin only. */
+/**
+ * Every raider's pre-pick on every unresolved item, with what it will count as, plus per-raider
+ * pick counts — a PlanPreviewView from the session DO's plansRevision-keyed cache. Admin only.
+ */
 adminRoutes.get('/sessions/:id/plans', async (c) => {
   const sessionId = Number(c.req.param('id'));
-  const db = c.env.DB;
-  const rows = await db
-    .prepare(
-      `SELECT p.item_id, i.name AS item_name, p.raider_id, r.username, p.tier FROM plans p
-       JOIN items i ON i.id = p.item_id JOIN raiders r ON r.id = p.raider_id
-       WHERE p.session_id = ? AND i.resolved_at IS NULL ORDER BY p.item_id, r.username COLLATE NOCASE`,
-    )
-    .bind(sessionId)
-    .all<{ item_id: number; item_name: string; raider_id: number; username: string; tier: Tier }>();
-  const items = await sessionItemsForEligibility(db, sessionId);
-  const won = wonItemNamesFrom(items.results);
-  const elig = await loadEligibility(db, sessionId, items.results);
-  const out: Record<number, { raiderId: number; username: string; tier: Tier; effectiveTier: Tier }[]> = {};
-  for (const p of rows.results) {
-    // One win per copy: a pick on a duplicate of an item the raider already won counts as Pass.
-    const effectiveTier = won.get(p.raider_id)?.has(p.item_name) ? 'pass' : demoteTier(p.tier, elig.eligibilityFor(p.raider_id, 0));
-    (out[p.item_id] ??= []).push({ raiderId: p.raider_id, username: p.username, tier: p.tier, effectiveTier });
-  }
-  return c.json(out);
-});
-
-/** Who has pre-picked how many unresolved items â€” shown before running an instant batch. */
-adminRoutes.get('/sessions/:id/plans-summary', async (c) => {
-  const sessionId = Number(c.req.param('id'));
-  const db = c.env.DB;
-  const picks = await db
-    .prepare(
-      `SELECT p.raider_id, COUNT(*) AS n FROM plans p JOIN items i ON i.id = p.item_id
-       WHERE p.session_id = ? AND i.resolved_at IS NULL GROUP BY p.raider_id`,
-    )
-    .bind(sessionId)
-    .all<{ raider_id: number; n: number }>();
-  const unresolved = await db
-    .prepare('SELECT COUNT(*) AS n FROM items i JOIN bosses b ON b.id = i.boss_id WHERE b.session_id = ? AND i.resolved_at IS NULL')
-    .bind(sessionId)
-    .first<{ n: number }>();
-  return c.json({ raiders: picks.results.map((r) => ({ raiderId: r.raider_id, picks: r.n })), unresolvedItems: unresolved?.n ?? 0 });
+  if (!sessionId) return c.json({ error: 'not found' }, 404);
+  const res = await sessionStub(c.env, sessionId).fetch(`https://do/plans?sessionId=${sessionId}`);
+  if (!res.ok) return c.json({ error: 'not found' }, 404);
+  return new Response(res.body, { headers: { 'content-type': 'application/json' } });
 });
 
 adminRoutes.get('/sessions/:id/rolls', async (c) => {

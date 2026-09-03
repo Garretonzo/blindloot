@@ -162,6 +162,23 @@ export interface SessionDetail {
   revision?: number;
 }
 
+/** One raider's pre-pick on one unresolved item, as the admin preview shows it. */
+export interface PlanPreview {
+  raiderId: number;
+  username: string;
+  tier: Tier;
+  /** What the pick will count as at batch time: Pass on a won copy, else demoted to what the raider's stored charges still afford. */
+  effectiveTier: Tier;
+}
+
+/** The admin pre-pick preview: served from the SessionDO's cache, keyed on `plansRevision`. */
+export interface PlanPreviewView {
+  /** Counter this view was built at; the client skips a refetch when it matches the socket's. */
+  plansRevision: number;
+  items: Record<number, PlanPreview[]>;
+  summary: { raiders: { raiderId: number; picks: number }[]; unresolvedItems: number };
+}
+
 export interface RollEntry {
   raiderId: number;
   username: string;
@@ -239,7 +256,11 @@ export interface LiveState {
   lockedIn: number[];
   /** bump to tell clients to refetch session detail */
   revision: number;
-  /** Bumped when any raider's pre-pick changes. Only the admin page reacts (its pre-pick preview); raider pages ignore it. */
+  /**
+   * Bumped when any raider's pre-pick changes, and on every `revision` bump (the pre-pick preview
+   * is built on the detail, so a detail change is a preview change). Only the admin page reacts;
+   * raider pages ignore it.
+   */
   plansRevision: number;
 }
 
