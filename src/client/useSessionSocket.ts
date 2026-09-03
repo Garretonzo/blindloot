@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ClientMessage, LiveState, ServerMessage } from '../shared/types';
 import { notifications } from '@mantine/notifications';
 
-export function useSessionSocket(sessionId: number, raiderId: number | null, token: string | null = null, admin = false) {
+export function useSessionSocket(sessionId: number, token: string | null = null, admin = false) {
   const [state, setState] = useState<LiveState | null>(null);
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -15,7 +15,7 @@ export function useSessionSocket(sessionId: number, raiderId: number | null, tok
     const connect = () => {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       const url = new URL(`${proto}://${location.host}/api/sessions/${sessionId}/ws`);
-      if (raiderId != null) url.searchParams.set('raiderId', String(raiderId));
+      // Identity comes from the token alone — the server ignores any client-sent raider id.
       if (token) url.searchParams.set('token', token);
       // Only the admin page asks for the admin view; the raider page stays sanitized even for admins.
       if (admin) url.searchParams.set('admin', '1');
@@ -52,7 +52,7 @@ export function useSessionSocket(sessionId: number, raiderId: number | null, tok
       wsRef.current = null;
       ws?.close();
     };
-  }, [sessionId, raiderId, token, admin]);
+  }, [sessionId, token, admin]);
 
   const send = useCallback((msg: ClientMessage) => {
     const ws = wsRef.current;

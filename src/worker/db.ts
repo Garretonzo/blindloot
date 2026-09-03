@@ -14,7 +14,9 @@ export async function getSessionDetail(db: D1Database, sessionId: number): Promi
       .all<Omit<Boss, 'items'>>(),
     db
       .prepare(
-        `SELECT i.* FROM items i JOIN bosses b ON b.id = i.boss_id
+        `SELECT i.*,
+                (SELECT ro.picked_tier FROM rolls ro WHERE ro.item_id = i.id AND ro.raider_id = i.winner_raider_id LIMIT 1) AS winner_picked_tier
+         FROM items i JOIN bosses b ON b.id = i.boss_id
          WHERE b.session_id = ? ORDER BY b.sort_order, b.id, i.sort_order, i.id`,
       )
       .bind(sessionId)
@@ -41,31 +43,35 @@ interface RaiderRow {
   need_per_session: number;
 }
 
-export async function getSessionRaiders(db: D1Database, sessionId: number): Promise<Raider[]> {
-  const rows = await db
-    .prepare(
-      `SELECT r.id, r.username, r.avatar, ssr.item_level, sr.dibs_remaining, ssr.need_remaining,
+const SESSION_RAIDER_SQL = `SELECT r.id, r.username, r.avatar, ssr.item_level, sr.dibs_remaining, ssr.need_remaining,
               se.dibs_per_season, se.need_per_session
        FROM session_raiders ssr
        JOIN raiders r ON r.id = ssr.raider_id
        JOIN sessions s ON s.id = ssr.session_id
        JOIN seasons se ON se.id = s.season_id
        JOIN season_raiders sr ON sr.season_id = s.season_id AND sr.raider_id = r.id
-       WHERE ssr.session_id = ?
-       ORDER BY ssr.joined_at, r.id`,
-    )
-    .bind(sessionId)
-    .all<RaiderRow>();
-  return rows.results.map((r) => ({
-    id: r.id,
-    username: r.username,
-    avatar: r.avatar,
-    item_level: r.item_level,
-    dibs_remaining: r.dibs_remaining,
-    need_remaining: r.need_remaining,
-    dibs_limit: r.dibs_per_season,
-    need_limit: r.need_per_session,
-  }));
+       WHERE ssr.session_id = ?1`;
+
+const toRaider = (r: RaiderRow): Raider => ({
+  id: r.id,
+  username: r.username,
+  avatar: r.avatar,
+  item_level: r.item_level,
+  dibs_remaining: r.dibs_remaining,
+  need_remaining: r.need_remaining,
+  dibs_limit: r.dibs_per_season,
+  need_limit: r.need_per_session,
+});
+
+export async function getSessionRaiders(db: D1Database, sessionId: number): Promise<Raider[]> {
+  const rows = await db.prepare(`${SESSION_RAIDER_SQL} ORDER BY ssr.joined_at, r.id`).bind(sessionId).all<RaiderRow>();
+  return rows.results.map(toRaider);
+}
+
+/** One raider's session record (a primary-key lookup) — validate a single raider's action without loading the whole roster. */
+export async function getSessionRaider(db: D1Database, sessionId: number, raiderId: number): Promise<Raider | null> {
+  const row = await db.prepare(`${SESSION_RAIDER_SQL} AND ssr.raider_id = ?2`).bind(sessionId, raiderId).first<RaiderRow>();
+  return row ? toRaider(row) : null;
 }
 
 /** Ordered list of item ids for a session that have not yet been resolved. */
@@ -162,23 +168,43 @@ export async function getRaidersWhoWonCopy(db: D1Database, itemId: number): Prom
   return new Set(rows.results.map((r) => r.raider_id));
 }
 
+/** Has this one raider already won ANOTHER item with the same name as `itemId` in its session? Driven by the raider's (few) wins. */
+export async function hasRaiderWonCopy(db: D1Database, itemId: number, raiderId: number): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT 1 AS hit FROM items w JOIN bosses wb ON wb.id = w.boss_id
+       JOIN items i ON i.id = ?1 JOIN bosses b ON b.id = i.boss_id
+       WHERE w.winner_raider_id = ?2 AND w.id != ?1 AND w.name = i.name AND wb.session_id = b.session_id
+       LIMIT 1`,
+    )
+    .bind(itemId, raiderId)
+    .first<{ hit: number }>();
+  return row != null;
+}
+
+/** raiderId -> item names already won, from an already-loaded list of a session's items. */
+export function wonItemNamesFrom(items: { name: string; winner_raider_id: number | null }[]): Map<number, Set<string>> {
+  const out = new Map<number, Set<string>>();
+  for (const i of items) {
+    if (i.winner_raider_id == null) continue;
+    let set = out.get(i.winner_raider_id);
+    if (!set) out.set(i.winner_raider_id, (set = new Set()));
+    set.add(i.name);
+  }
+  return out;
+}
+
 /** raiderId -> item names already won in this session (for the one-win-per-copy rule). */
 export async function getWonItemNames(db: D1Database, sessionId: number): Promise<Map<number, Set<string>>> {
   const rows = await db
     .prepare(
-      `SELECT i.winner_raider_id AS raider_id, i.name FROM items i
+      `SELECT i.winner_raider_id, i.name FROM items i
        JOIN bosses b ON b.id = i.boss_id
        WHERE b.session_id = ? AND i.winner_raider_id IS NOT NULL`,
     )
     .bind(sessionId)
-    .all<{ raider_id: number; name: string }>();
-  const out = new Map<number, Set<string>>();
-  for (const r of rows.results) {
-    let set = out.get(r.raider_id);
-    if (!set) out.set(r.raider_id, (set = new Set()));
-    set.add(r.name);
-  }
-  return out;
+    .all<{ winner_raider_id: number; name: string }>();
+  return wonItemNamesFrom(rows.results);
 }
 
 /**
@@ -206,21 +232,6 @@ export async function getWinCounts(db: D1Database, sessionId: number): Promise<W
   return out;
 }
 
-/** itemId -> a raider's recorded pre-pick on the items in this session that they WON (for showing winners their own pick). */
-export async function getWinnerPickedTiers(db: D1Database, sessionId: number, raiderId: number): Promise<Record<number, Tier | null>> {
-  const rows = await db
-    .prepare(
-      `SELECT ro.item_id, ro.picked_tier FROM rolls ro
-       JOIN items i ON i.id = ro.item_id JOIN bosses b ON b.id = i.boss_id
-       WHERE b.session_id = ?1 AND ro.raider_id = ?2 AND i.winner_raider_id = ?2`,
-    )
-    .bind(sessionId, raiderId)
-    .all<{ item_id: number; picked_tier: Tier | null }>();
-  const out: Record<number, Tier | null> = {};
-  for (const r of rows.results) out[r.item_id] = r.picked_tier;
-  return out;
-}
-
 /** raiderId -> planned tier for one item. */
 export async function getPlansForItem(db: D1Database, itemId: number): Promise<Record<number, Tier>> {
   const rows = await db.prepare('SELECT raider_id, tier FROM plans WHERE item_id = ?').bind(itemId).all<{ raider_id: number; tier: Tier }>();
@@ -229,25 +240,35 @@ export async function getPlansForItem(db: D1Database, itemId: number): Promise<R
   return out;
 }
 
-/** All recorded rolls for a session, grouped by item id, with the roller's current season ilvl. */
+/** All recorded rolls for a session, grouped by item id, with each roller's pre-pick and current session ilvl. */
 export async function getSessionRolls(db: D1Database, sessionId: number): Promise<Record<number, RollEntry[]>> {
   const rows = await db
     .prepare(
-      `SELECT ro.item_id, ro.raider_id, r.username, ro.tier, ro.roll_value, ro.won, COALESCE(ssr.item_level, 0) AS item_level
+      `SELECT ro.item_id, ro.raider_id, r.username, ro.tier, ro.picked_tier, ro.roll_value, ro.won, COALESCE(ssr.item_level, 0) AS item_level
        FROM rolls ro
-       JOIN items i ON i.id = ro.item_id JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
+       JOIN items i ON i.id = ro.item_id JOIN bosses b ON b.id = i.boss_id
        JOIN raiders r ON r.id = ro.raider_id
-       LEFT JOIN session_raiders ssr ON ssr.session_id = s.id AND ssr.raider_id = ro.raider_id
-       WHERE s.id = ? ORDER BY ro.id`,
+       LEFT JOIN session_raiders ssr ON ssr.session_id = b.session_id AND ssr.raider_id = ro.raider_id
+       WHERE b.session_id = ? ORDER BY ro.id`,
     )
     .bind(sessionId)
-    .all<{ item_id: number; raider_id: number; username: string; tier: Tier; roll_value: number | null; won: number; item_level: number }>();
+    .all<{
+      item_id: number;
+      raider_id: number;
+      username: string;
+      tier: Tier;
+      picked_tier: Tier | null;
+      roll_value: number | null;
+      won: number;
+      item_level: number;
+    }>();
   const out: Record<number, RollEntry[]> = {};
   for (const r of rows.results) {
     (out[r.item_id] ??= []).push({
       raiderId: r.raider_id,
       username: r.username,
       tier: r.tier,
+      pickedTier: r.picked_tier,
       roll: r.roll_value,
       itemLevel: r.item_level,
       won: !!r.won,
@@ -376,6 +397,77 @@ export async function raiderEligibility(
   const needRemaining = row?.need_remaining ?? 0;
   const dibsRemaining = row?.dibs_remaining ?? 0;
   return { needAvailable: needRemaining > 0, canDibs: dibsRemaining > 0 && needRemaining > 0 };
+}
+
+/** Eligibility for many raiders from data loaded once — the in-memory twin of `raiderEligibility`. */
+export interface EligibilityIndex {
+  eligibilityFor(raiderId: number, excludeItemId: number): { needAvailable: boolean; canDibs: boolean };
+}
+
+/**
+ * Pure part of `loadEligibility`: `sessionItems` are this session's items, `seasonDibsWins` every
+ * Dibs win in the season (this session included). Semantics match `raiderEligibility` exactly,
+ * including ignoring `excludeItemId` and treating an unknown session as fully spent.
+ */
+export function eligibilityIndex(
+  limits: { need_per_session: number; dibs_per_season: number } | null,
+  sessionItems: { id: number; winner_raider_id: number | null; win_tier: Tier | null }[],
+  seasonDibsWins: { id: number; winner_raider_id: number | null }[],
+): EligibilityIndex {
+  const push = (m: Map<number, number[]>, raiderId: number, itemId: number) => {
+    let list = m.get(raiderId);
+    if (!list) m.set(raiderId, (list = []));
+    list.push(itemId);
+  };
+  const bigWins = new Map<number, number[]>(); // raider -> items won with Need/Dibs this session
+  const dibsWins = new Map<number, number[]>(); // raider -> items won with Dibs this season
+  for (const i of sessionItems) {
+    if (i.winner_raider_id != null && (i.win_tier === 'need' || i.win_tier === 'dibs')) push(bigWins, i.winner_raider_id, i.id);
+  }
+  for (const i of seasonDibsWins) if (i.winner_raider_id != null) push(dibsWins, i.winner_raider_id, i.id);
+  const countExcluding = (m: Map<number, number[]>, raiderId: number, excludeItemId: number) =>
+    (m.get(raiderId) ?? []).filter((id) => id !== excludeItemId).length;
+  return {
+    eligibilityFor(raiderId, excludeItemId) {
+      if (!limits) return { needAvailable: false, canDibs: false };
+      const needRemaining = Math.max(0, limits.need_per_session - countExcluding(bigWins, raiderId, excludeItemId));
+      const dibsRemaining = Math.max(0, limits.dibs_per_season - countExcluding(dibsWins, raiderId, excludeItemId));
+      return { needAvailable: needRemaining > 0, canDibs: dibsRemaining > 0 && needRemaining > 0 };
+    },
+  };
+}
+
+/**
+ * Load what `raiderEligibility` needs for a whole session in three small queries, so admin views
+ * that annotate hundreds of (item, raider) pairs stop issuing one query per pair. Pass the
+ * session's items if the caller already has them.
+ */
+export async function loadEligibility(
+  db: D1Database,
+  sessionId: number,
+  sessionItems?: { id: number; winner_raider_id: number | null; win_tier: Tier | null }[],
+): Promise<EligibilityIndex> {
+  const limits = await db
+    .prepare('SELECT se.id AS season_id, se.need_per_session, se.dibs_per_season FROM seasons se JOIN sessions s ON s.season_id = se.id WHERE s.id = ?')
+    .bind(sessionId)
+    .first<{ season_id: number; need_per_session: number; dibs_per_season: number }>();
+  if (!limits) return eligibilityIndex(null, [], []);
+  const items =
+    sessionItems ??
+    (
+      await db
+        .prepare('SELECT i.id, i.winner_raider_id, i.win_tier FROM items i JOIN bosses b ON b.id = i.boss_id WHERE b.session_id = ?')
+        .bind(sessionId)
+        .all<{ id: number; winner_raider_id: number | null; win_tier: Tier | null }>()
+    ).results;
+  const dibs = await db
+    .prepare(
+      `SELECT i.id, i.winner_raider_id FROM items i JOIN bosses b ON b.id = i.boss_id JOIN sessions s ON s.id = b.session_id
+       WHERE s.season_id = ? AND i.win_tier = 'dibs' AND i.winner_raider_id IS NOT NULL`,
+    )
+    .bind(limits.season_id)
+    .all<{ id: number; winner_raider_id: number | null }>();
+  return eligibilityIndex(limits, items, dibs.results);
 }
 
 export async function setSessionStatus(db: D1Database, sessionId: number, status: Session['status']) {

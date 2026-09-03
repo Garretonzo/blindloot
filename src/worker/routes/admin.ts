@@ -17,19 +17,18 @@ import {
   validateSnapshot,
 } from '../backup';
 import {
-  getRaidersWhoWonCopy,
-  getSessionDetail,
-  getSessionRolls,
-  getWonItemNames,
+  hasRaiderWonCopy,
   joinSession,
   LAST_ILVL_SQL,
+  loadEligibility,
   raiderEligibility,
   recomputeRaiderResources,
   recomputeSeasonResources,
   setItemLevelStatements,
   upsertRaider,
+  wonItemNamesFrom,
 } from '../db';
-import { demoteTier, SummaryItem, Tier } from '../../shared/types';
+import { demoteTier, RollEntry, Tier } from '../../shared/types';
 import { raidById } from '../../shared/raids';
 
 export const adminRoutes = new Hono<AppEnv>();
@@ -390,41 +389,12 @@ adminRoutes.delete('/sessions/:id/items/:itemId', async (c) => {
   return c.json({ ok: true });
 });
 
-/** The session's full loot story: every resolved item in order with everyone's pick, roll and outcome. */
-adminRoutes.get('/sessions/:id/summary', async (c) => {
-  const sessionId = Number(c.req.param('id'));
-  const db = c.env.DB;
-  const items = await db
-    .prepare(
-      `SELECT i.id, i.name, i.icon, b.name AS boss_name, b.icon AS boss_icon, i.resolved_mode, i.winner_raider_id, i.win_tier, w.username AS winner_name
-       FROM items i JOIN bosses b ON b.id = i.boss_id LEFT JOIN raiders w ON w.id = i.winner_raider_id
-       WHERE b.session_id = ? AND i.resolved_at IS NOT NULL ORDER BY i.resolved_at, i.id`,
-    )
+/** Every session item's name, winner and tier — the inputs of the one-win-per-copy rule and eligibility. */
+const sessionItemsForEligibility = (db: D1Database, sessionId: number) =>
+  db
+    .prepare('SELECT i.id, i.name, i.winner_raider_id, i.win_tier FROM items i JOIN bosses b ON b.id = i.boss_id WHERE b.session_id = ?')
     .bind(sessionId)
-    .all<{ id: number; name: string; icon: string | null; boss_name: string; boss_icon: string | null; resolved_mode: SummaryItem['mode']; winner_raider_id: number | null; win_tier: Tier | null; winner_name: string | null }>();
-  const rolls = await getSessionRolls(db, sessionId);
-  const picked = await db
-    .prepare(
-      `SELECT ro.item_id, ro.raider_id, ro.picked_tier FROM rolls ro JOIN items i ON i.id = ro.item_id JOIN bosses b ON b.id = i.boss_id WHERE b.session_id = ?`,
-    )
-    .bind(sessionId)
-    .all<{ item_id: number; raider_id: number; picked_tier: Tier | null }>();
-  const pickedBy = new Map(picked.results.map((r) => [`${r.item_id}:${r.raider_id}`, r.picked_tier]));
-  const out: SummaryItem[] = items.results.map((i, idx) => ({
-    itemId: i.id,
-    name: i.name,
-    icon: i.icon,
-    bossName: i.boss_name,
-    bossIcon: i.boss_icon,
-    order: idx + 1,
-    mode: i.resolved_mode,
-    winnerId: i.winner_raider_id,
-    winnerName: i.winner_name,
-    winTier: i.win_tier,
-    entries: (rolls[i.id] ?? []).map((e) => ({ ...e, pickedTier: pickedBy.get(`${i.id}:${e.raiderId}`) ?? null })),
-  }));
-  return c.json({ items: out });
-});
+    .all<{ id: number; name: string; winner_raider_id: number | null; win_tier: Tier | null }>();
 
 /** Every raider's pre-pick on every unresolved item, with what it will actually count as. Admin only. */
 adminRoutes.get('/sessions/:id/plans', async (c) => {
@@ -438,21 +408,14 @@ adminRoutes.get('/sessions/:id/plans', async (c) => {
     )
     .bind(sessionId)
     .all<{ item_id: number; item_name: string; raider_id: number; username: string; tier: Tier }>();
-  const won = await getWonItemNames(db, sessionId);
-  const elig = new Map<number, { needAvailable: boolean; canDibs: boolean }>();
+  const items = await sessionItemsForEligibility(db, sessionId);
+  const won = wonItemNamesFrom(items.results);
+  const elig = await loadEligibility(db, sessionId, items.results);
   const out: Record<number, { raiderId: number; username: string; tier: Tier; effectiveTier: Tier }[]> = {};
   for (const p of rows.results) {
     // One win per copy: a pick on a duplicate of an item the raider already won counts as Pass.
-    if (won.get(p.raider_id)?.has(p.item_name)) {
-      (out[p.item_id] ??= []).push({ raiderId: p.raider_id, username: p.username, tier: p.tier, effectiveTier: 'pass' });
-      continue;
-    }
-    let e = elig.get(p.raider_id);
-    if (!e) {
-      e = await raiderEligibility(db, sessionId, p.raider_id, 0);
-      elig.set(p.raider_id, e);
-    }
-    (out[p.item_id] ??= []).push({ raiderId: p.raider_id, username: p.username, tier: p.tier, effectiveTier: demoteTier(p.tier, e) });
+    const effectiveTier = won.get(p.raider_id)?.has(p.item_name) ? 'pass' : demoteTier(p.tier, elig.eligibilityFor(p.raider_id, 0));
+    (out[p.item_id] ??= []).push({ raiderId: p.raider_id, username: p.username, tier: p.tier, effectiveTier });
   }
   return c.json(out);
 });
@@ -477,18 +440,15 @@ adminRoutes.get('/sessions/:id/plans-summary', async (c) => {
 
 adminRoutes.get('/sessions/:id/rolls', async (c) => {
   const sessionId = Number(c.req.param('id'));
-  const rolls = await getSessionRolls(c.env.DB, sessionId);
-  // For the one-win-per-copy rule: every session item's name and winner.
-  const sessionItems = await c.env.DB.prepare(
-    'SELECT i.id, i.name, i.winner_raider_id FROM items i JOIN bosses b ON b.id = i.boss_id WHERE b.session_id = ?',
-  )
-    .bind(sessionId)
-    .all<{ id: number; name: string; winner_raider_id: number | null }>();
+  // Roll history comes from the session DO's revision-keyed cache; only the annotation below reads D1.
+  const res = await sessionStub(c.env, sessionId).fetch(`https://do/rolls?sessionId=${sessionId}`);
+  const rolls = (await res.json()) as Record<number, RollEntry[]>;
+  const sessionItems = await sessionItemsForEligibility(c.env.DB, sessionId);
   const itemName = new Map(sessionItems.results.map((i) => [i.id, i.name]));
   const wonCopy = (itemId: number, raiderId: number) =>
     sessionItems.results.some((i) => i.id !== itemId && i.winner_raider_id === raiderId && i.name === itemName.get(itemId));
+  const elig = await loadEligibility(c.env.DB, sessionId, sessionItems.results);
   // Annotate each roll with what it would count as today (runner-ups may have won Need/Dibs since).
-  const cache = new Map<string, { needAvailable: boolean; canDibs: boolean }>();
   for (const [itemIdStr, entries] of Object.entries(rolls)) {
     const itemId = Number(itemIdStr);
     for (const e of entries) {
@@ -503,13 +463,7 @@ adminRoutes.get('/sessions/:id/rolls', async (c) => {
         e.ineligible = false;
         continue;
       }
-      const key = `${itemId}:${e.raiderId}`;
-      let el = cache.get(key);
-      if (!el) {
-        el = await raiderEligibility(c.env.DB, sessionId, e.raiderId, itemId);
-        cache.set(key, el);
-      }
-      e.effectiveTier = demoteTier(e.tier, el);
+      e.effectiveTier = demoteTier(e.tier, elig.eligibilityFor(e.raiderId, itemId));
       e.ineligible = e.effectiveTier !== e.tier;
     }
   }
@@ -528,7 +482,7 @@ adminRoutes.post('/sessions/:id/items/:itemId/award', async (c) => {
   // already won with Need/Dibs elsewhere (ignoring this item, whose winner is being replaced),
   // and awarding a second copy of an item the raider already won is rejected outright.
   if (raiderId != null && tier && !body.force) {
-    if ((await getRaidersWhoWonCopy(db, itemId)).has(raiderId))
+    if (await hasRaiderWonCopy(db, itemId, raiderId))
       return c.json({ error: 'Already won a copy of this item this session — confirm to award anyway' }, 409);
     tier = demoteTier(tier, await raiderEligibility(db, sessionId, raiderId, itemId));
   }
@@ -720,11 +674,13 @@ adminRoutes.delete('/sessions/:id/raiders/:raiderId', async (c) => {
   return c.json({ ok: true });
 });
 
-/** Unsanitized session detail (all tiers and charge states) for the admin session page. */
+/** Unsanitized session detail (all tiers and charge states) for the admin session page, from the session DO's cache. */
 adminRoutes.get('/sessions/:id/detail', async (c) => {
-  const detail = await getSessionDetail(c.env.DB, Number(c.req.param('id')));
-  if (!detail) return c.json({ error: 'not found' }, 404);
-  return c.json(detail);
+  const sessionId = Number(c.req.param('id'));
+  if (!sessionId) return c.json({ error: 'not found' }, 404);
+  const res = await sessionStub(c.env, sessionId).fetch(`https://do/detail?sessionId=${sessionId}`);
+  if (!res.ok) return c.json({ error: 'not found' }, 404);
+  return new Response(res.body, { headers: { 'content-type': 'application/json' } });
 });
 
 adminRoutes.get('/sessions/:id/live', async (c) => {

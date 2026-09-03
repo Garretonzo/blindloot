@@ -1,4 +1,4 @@
-import { RollEntry, Season, Session, SessionDetail, SummaryItem, Tier } from '../shared/types';
+import { RollEntry, Season, Session, SessionDetail, Tier } from '../shared/types';
 
 async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
@@ -42,6 +42,8 @@ export const api = {
   /** REST fallback for the "happy with my picks" toggle when the session socket is down. */
   lockIn: (id: number, value: boolean) => req('POST', `/api/sessions/${id}/lock-in`, { value }),
   roster: () => req<{ id: number; username: string; avatar: string | null; has_password: number }[]>('GET', '/api/raiders'),
+  /** The logged-in raider's own roster record (one row — pages that only need their own avatar use this, not the roster). */
+  me: () => req<{ id: number; username: string; avatar: string | null }>('GET', '/api/raiders/me'),
   /** Set (or clear, with null) the logged-in raider's avatar — a tiny data URL from fileToAvatar. */
   setAvatar: (avatar: string | null) => req('PUT', '/api/raiders/me/avatar', { avatar }),
   presence: () => req<{ online: number[] }>('GET', '/api/presence'),
@@ -85,7 +87,6 @@ export const api = {
       req('DELETE', `/api/admin/sessions/${sessionId}/items/${itemId}`),
     rolls: (sessionId: number) => req<Record<number, RollEntry[]>>('GET', `/api/admin/sessions/${sessionId}/rolls`),
     plans: (sessionId: number) => req<Record<number, PlanPreview[]>>('GET', `/api/admin/sessions/${sessionId}/plans`),
-    summary: (sessionId: number) => req<{ items: SummaryItem[] }>('GET', `/api/admin/sessions/${sessionId}/summary`),
     plansSummary: (sessionId: number) =>
       req<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number }>('GET', `/api/admin/sessions/${sessionId}/plans-summary`),
     award: (sessionId: number, itemId: number, raiderId: number | null, tier: Tier | null, force = false) =>

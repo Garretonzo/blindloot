@@ -97,6 +97,11 @@ export interface Item {
   resolve_run: number | null;
   /** Raider view only: the viewer's recorded pre-pick on an item they won (null = rolled live / no pre-pick). */
   my_picked_tier?: Tier | null;
+  /**
+   * The winner's own recorded pre-pick on this item. Present in unsanitized (admin / DO-cached)
+   * detail; the raider view strips it and exposes it only as `my_picked_tier` on the viewer's wins.
+   */
+  winner_picked_tier?: Tier | null;
 }
 
 export interface Boss {
@@ -153,6 +158,8 @@ export interface SessionDetail {
   season: Season;
   bosses: Boss[];
   raiders: Raider[];
+  /** Live-state revision this detail was built at (set when served through the SessionDO cache). Clients skip a refetch when it matches the socket's. */
+  revision?: number;
 }
 
 export interface RollEntry {
@@ -232,6 +239,8 @@ export interface LiveState {
   lockedIn: number[];
   /** bump to tell clients to refetch session detail */
   revision: number;
+  /** Bumped when any raider's pre-pick changes. Only the admin page reacts (its pre-pick preview); raider pages ignore it. */
+  plansRevision: number;
 }
 
 export type ClientMessage =

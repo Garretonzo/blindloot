@@ -2,13 +2,15 @@ import { Anchor, Badge, Button, Checkbox, Divider, Group, NumberInput, Select, S
 import { SectionCard } from '../components/SectionCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { notifications } from '@mantine/notifications';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, PlanPreview, RosterRaider } from '../api';
 import { PrePickPreview } from '../components/PrePickPreview';
 import { RollEntry, SessionDetail, SummaryItem, TIER_LABEL } from '../../shared/types';
 import { SessionSummary } from '../components/SessionSummary';
 import { useSessionSocket } from '../useSessionSocket';
+import { useRevisionedFetch } from '../useRevisionedFetch';
+import { summarize } from '../summary';
 import { useRequireAdmin } from './Admin';
 import { ItemList } from '../components/ItemList';
 import { RaiderTable } from '../components/RaiderTable';
@@ -73,26 +75,55 @@ export function AdminSessionPage() {
   const [rolls, setRolls] = useState<Record<number, RollEntry[]>>({});
   const [picks, setPicks] = useState<{ raiders: { raiderId: number; picks: number }[]; unresolvedItems: number } | null>(null);
   const [plans, setPlans] = useState<Record<number, PlanPreview[]>>({});
-  const [summary, setSummary] = useState<SummaryItem[]>([]);
-  const { state: live, connected, send } = useSessionSocket(sessionId, null, null, true);
+  const { state: live, connected, send } = useSessionSocket(sessionId, null, true);
 
-  const refresh = useCallback(() => {
-    api.admin.session(sessionId).then(setDetail).catch(() => setDetail(null));
-    api.admin.rolls(sessionId).then(setRolls).catch(() => {});
+  // Loot, roster and roll history only change with a revision bump: fetched once per revision.
+  const loadCore = useCallback(async () => {
+    const [d, r] = await Promise.all([api.admin.session(sessionId), api.admin.rolls(sessionId).catch(() => null)]);
+    setDetail(d);
+    if (r) setRolls(r);
+    return d.revision ?? null;
+  }, [sessionId]);
+  const refetchCore = useRevisionedFetch(loadCore, live?.revision, ok);
+
+  // Pre-picks change on every raider click (plansRevision) and on resolution (revision deletes
+  // them). Trailing-debounced so a burst of clicks costs one refetch, not one per click.
+  const refetchPlans = useCallback(() => {
     api.admin.plansSummary(sessionId).then(setPicks).catch(() => {});
     api.admin.plans(sessionId).then(setPlans).catch(() => {});
-    api.admin.summary(sessionId).then((s) => setSummary(s.items)).catch(() => {});
   }, [sessionId]);
+  const [plansLoaded, setPlansLoaded] = useState(false);
   useEffect(() => {
-    if (ok) refresh();
-  }, [ok, refresh, live?.revision]);
+    if (!ok) return;
+    const t = window.setTimeout(
+      () => {
+        setPlansLoaded(true);
+        refetchPlans();
+      },
+      plansLoaded ? 1000 : 0,
+    );
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ok, refetchPlans, live?.revision, live?.plansRevision]);
+
+  // The loot story is derived, not fetched: detail + roll history already carry everything.
+  const summary = useMemo<SummaryItem[]>(() => (detail ? summarize(detail, rolls) : []), [detail, rolls]);
 
   if (!ok || !detail) return null;
 
   const pendingCount = detail.bosses.flatMap((b) => b.items).filter((i) => i.resolved_at == null).length;
 
-  const run =(p: Promise<unknown>) =>
-    p.then(refresh).catch((e: Error) => notifications.show({ color: 'red', message: e.message }));
+  const run = (p: Promise<unknown>) =>
+    p
+      .then(() => {
+        // Every admin action bumps the live revision, which drives the refetch; only refetch
+        // explicitly when the socket is down and can't deliver that bump.
+        if (!connected) {
+          refetchCore(true);
+          refetchPlans();
+        }
+      })
+      .catch((e: Error) => notifications.show({ color: 'red', message: e.message }));
 
   const phase = live?.phase ?? 'open';
   const rolling = phase === 'item' || phase === 'results';

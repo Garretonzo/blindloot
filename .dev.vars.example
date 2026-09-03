@@ -2,3 +2,5 @@ ADMIN_PASSWORD=changeme
 SUPER_ADMIN_PASSWORD=changeme-super
 # Everyone must enter this before picking their name. Leave unset to disable the gate.
 SITE_PASSWORD=raidpass
+# Dev only: log D1 rows_read per request (and an x-d1-rows-read response header) to measure the free-tier budget.
+# D1_METER=1

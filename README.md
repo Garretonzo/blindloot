@@ -42,6 +42,21 @@ npm run dev                         # http://localhost:8787
 `npm test` runs the loot-resolution unit tests. To start the local database over from scratch:
 `rm -rf .wrangler/state && npm run db:migrate:local`.
 
+### Staying inside the D1 free tier
+
+The free plan allows 5M `rows_read` per day, and a raid night is a fan-out problem: every change
+is announced over the session's WebSocket and every open tab refetches. To keep that cheap:
+
+- Session detail and roll history are served from a **revision-keyed cache inside `SessionDO`**
+  (`/detail`, `/rolls`), so a change costs one D1 rebuild rather than one per connected browser.
+  Any D1 write that changes those views must go through a `revision` bump (`notifySession()`);
+  a 60s TTL covers the few writes that don't (avatars, renames).
+- Pre-picks are private, so `PUT /sessions/:id/plans` only bumps `plansRevision`, which reaches
+  admin sockets alone. Never add a `notifySession()` to a per-click raider action.
+- Set `D1_METER=1` in `.dev.vars` (or `wrangler dev --var D1_METER:1`) to log `rows_read` per
+  request (plus an `x-d1-rows-read` response header) and per DO query. Production truth:
+  `npx wrangler d1 insights justfuckingroll --timePeriod 1d --sort-by reads --sort-type sum`.
+
 ### Data model (`migrations/0001_init.sql`)
 
 - **seasons → sessions → bosses → items.** A season names its bundled boss/loot pool (`raid_id`).

@@ -106,9 +106,9 @@ export function useMyAvatar(): string | null {
     if (raiderId == null) return setAvatar(null);
     let gone = false;
     api
-      .roster()
-      .then((rows) => {
-        if (!gone) setAvatar(rows.find((r) => r.id === raiderId)?.avatar ?? null);
+      .me()
+      .then((r) => {
+        if (!gone) setAvatar(r.avatar);
       })
       .catch(() => {});
     const onUpdated = (e: Event) => setAvatar((e as CustomEvent<string | null>).detail ?? null);
@@ -132,12 +132,19 @@ export function NamePrompt() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Poll so a freshly added roster name shows up without a reload.
+  // Poll (slowly, and only while visible) so a freshly added roster name shows up without a reload.
   useEffect(() => {
-    const load = () => api.roster().then(setRoster).catch(() => {});
+    const load = () => {
+      if (document.hidden) return;
+      api.roster().then(setRoster).catch(() => {});
+    };
     load();
-    const t = window.setInterval(load, 5000);
-    return () => window.clearInterval(t);
+    const t = window.setInterval(load, 30_000);
+    document.addEventListener('visibilitychange', load);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener('visibilitychange', load);
+    };
   }, []);
 
   const sel = roster.find((r) => String(r.id) === picked);

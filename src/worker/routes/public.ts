@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { AppEnv } from '../env';
-import { getRaidersWhoWonCopy, getSessionDetail, getSessionRaiders, getWinnerPickedTiers, joinSession, LAST_ILVL_SQL } from '../db';
+import { getSessionRaider, hasRaiderWonCopy, joinSession, LAST_ILVL_SQL } from '../db';
 import { hashPassword, hasSiteAccess, isAdmin, requireSite, setSiteCookie, siteGateEnabled, verifyPassword } from '../auth';
-import { checkLogin, createLogin, deleteLogin, notifySession, presenceStub, raiderForToken, sessionStub } from '../session';
-import { canDibs, Tier, TIER_RANK } from '../../shared/types';
+import { checkLogin, createLogin, deleteLogin, notifyPlansChanged, notifySession, presenceStub, raiderForToken, sessionStub } from '../session';
+import { canDibs, SessionDetail, Tier, TIER_RANK } from '../../shared/types';
+import { sanitizeDetail } from '../sanitize';
 
 export const publicRoutes = new Hono<AppEnv>();
 
@@ -35,31 +36,15 @@ publicRoutes.get('/seasons', async (c) => {
 });
 
 publicRoutes.get('/sessions/:id', async (c) => {
-  const detail = await getSessionDetail(c.env.DB, Number(c.req.param('id')));
-  if (!detail) return c.json({ error: 'not found' }, 404);
-
+  const sessionId = Number(c.req.param('id'));
+  if (!sessionId) return c.json({ error: 'not found' }, 404);
+  // Served from the session DO's revision-keyed cache: one D1 rebuild per change, not one per browser.
+  const res = await sessionStub(c.env, sessionId).fetch(`https://do/detail?sessionId=${sessionId}`);
+  if (!res.ok) return c.json({ error: 'not found' }, 404);
+  const detail = (await res.json()) as SessionDetail;
   // ALWAYS sanitized — even for admins. The raider-facing page must never show privileged
   // info (tiers, others' charges); the admin page uses GET /api/admin/sessions/:id/detail.
-  // Raiders see who won (not how) and everyone's item level, but only their own Need / Dibs
-  // state — and on items they won themselves, the winning tier plus their own pre-pick.
-  const meId = c.get('authedRaiderId');
-  const myPicked = meId ? await getWinnerPickedTiers(c.env.DB, detail.session.id, meId) : {};
-  return c.json({
-    ...detail,
-    bosses: detail.bosses.map((b) => ({
-      ...b,
-      items: b.items.map((i) => {
-        const mine = meId != null && i.winner_raider_id === meId;
-        return { ...i, win_tier: mine ? i.win_tier : null, my_picked_tier: mine ? myPicked[i.id] ?? null : null };
-      }),
-    })),
-    // Others' charge state is omitted entirely, not zeroed — it never leaves the server.
-    raiders: detail.raiders.map((r) => {
-      if (r.id === meId) return r;
-      const { dibs_remaining: _d, need_remaining: _n, ...rest } = r;
-      return rest;
-    }),
-  });
+  return c.json(sanitizeDetail(detail, c.get('authedRaiderId')));
 });
 
 // ---- pre-planned rolls ----
@@ -95,9 +80,9 @@ publicRoutes.put('/sessions/:id/plans', async (c) => {
   if (!item) return c.json({ error: 'item not found' }, 404);
   if (item.resolved_at != null) return c.json({ error: 'item already rolled' }, 409);
 
-  const me = (await getSessionRaiders(db, sessionId)).find((r) => r.id === raiderId);
+  const me = await getSessionRaider(db, sessionId, raiderId);
   if (!me) return c.json({ error: 'not in this session' }, 403);
-  if (tier && tier !== 'pass' && (await getRaidersWhoWonCopy(db, itemId)).has(raiderId))
+  if (tier && tier !== 'pass' && (await hasRaiderWonCopy(db, itemId, raiderId)))
     return c.json({ error: 'You already won this item this session — duplicate copies are auto-passed' }, 409);
   if (tier === 'need' && me.need_remaining <= 0) return c.json({ error: 'No Need charges left this session' }, 409);
   if (tier === 'dibs' && !canDibs(me))
@@ -114,8 +99,8 @@ publicRoutes.put('/sessions/:id/plans', async (c) => {
   } else {
     await db.prepare('DELETE FROM plans WHERE item_id = ? AND raider_id = ?').bind(itemId, raiderId).run();
   }
-  // Let the admin's pre-pick preview refresh live.
-  await notifySession(c.env, sessionId);
+  // Let the admin's pre-pick preview refresh live — and nobody else's page (pre-picks are private).
+  await notifyPlansChanged(c.env, sessionId);
   return c.json({ ok: true });
 });
 
@@ -125,6 +110,17 @@ publicRoutes.get('/raiders', async (c) => {
     'SELECT id, username, avatar, (password_hash IS NOT NULL) AS has_password FROM raiders ORDER BY username COLLATE NOCASE',
   ).all();
   return c.json(rows.results);
+});
+
+/** The logged-in raider's own roster record — one row, for pages that only need the viewer's avatar. */
+publicRoutes.get('/raiders/me', async (c) => {
+  const raiderId = c.get('authedRaiderId');
+  if (!raiderId) return c.json({ error: 'not logged in' }, 401);
+  const row = await c.env.DB.prepare('SELECT id, username, avatar FROM raiders WHERE id = ?')
+    .bind(raiderId)
+    .first<{ id: number; username: string; avatar: string | null }>();
+  if (!row) return c.json({ error: 'raider not found' }, 404);
+  return c.json(row);
 });
 
 /** Set (or clear, with null) the logged-in raider's avatar: a tiny client-resized data URL. */

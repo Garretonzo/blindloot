@@ -8,16 +8,30 @@ import {
   getPendingPlans,
   getPlansForItem,
   getRaidersWhoWonCopy,
+  getSessionDetail,
+  getSessionRaider,
   getSessionRaiders,
+  getSessionRolls,
   getWinCounts,
   getWonItemNames,
+  hasRaiderWonCopy,
   persistResult,
   ResolveMode,
   setSessionStatus,
 } from './db';
+import { meteredDb, newMeter } from './d1-meter';
 
 const DEFAULT_ITEM_SECONDS = 10;
 const DEFAULT_RESULT_SECONDS = 3;
+/** How long a cached D1 view may be served without a rebuild — covers writes that never bump `revision` (avatar uploads, renames). */
+const CACHE_TTL_MS = 60_000;
+
+interface CacheEntry<T> {
+  data: T;
+  json: string;
+  revision: number;
+  fetchedAt: number;
+}
 const clampSeconds = (v: unknown, fallback: number) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) ? Math.min(600, Math.max(1, n)) : fallback;
@@ -45,6 +59,7 @@ const initialState = (): LiveState => ({
   shuffle: true,
   lockedIn: [],
   revision: 0,
+  plansRevision: 0,
   runId: null,
   batchReveal: null,
 });
@@ -53,9 +68,21 @@ export class SessionDO extends DurableObject<Env> {
   private state!: LiveState;
   private sessionId!: number;
   private ready: Promise<void>;
+  /**
+   * Revision-keyed read-through cache of D1-derived views (session detail, roll history). Every
+   * browser's refetch after a revision bump lands here, so one change costs one D1 rebuild rather
+   * than one per connected client. In-memory only: eviction just means a rebuild.
+   */
+  private cache = new Map<string, CacheEntry<unknown>>();
+  private inflight = new Map<string, Promise<CacheEntry<unknown> | null>>();
 
   constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
+    super(
+      ctx,
+      env.D1_METER
+        ? { ...env, DB: meteredDb(env.DB, newMeter((sql, r, w) => console.log(`[d1] SessionDO rows_read=${r} rows_written=${w} ${sql.replace(/\s+/g, ' ').slice(0, 80)}`))) }
+        : env,
+    );
     this.ready = ctx.blockConcurrencyWhile(async () => {
       // Merge over defaults so state persisted by older code gets new fields.
       this.state = { ...initialState(), ...((await ctx.storage.get<Partial<LiveState>>('state')) ?? {}) };
@@ -86,10 +113,30 @@ export class SessionDO extends DurableObject<Env> {
     }
 
     if (url.pathname === '/notify') {
+      if (url.searchParams.get('plans') === '1') {
+        // A pre-pick changed. Private data: only the admin's preview needs to know, so this is
+        // not a revision bump — no raider refetch, no cache invalidation, lockedIn untouched.
+        await this.save({ plansRevision: this.state.plansRevision + 1 }, 'admin');
+        return new Response('ok');
+      }
       // Data changed via REST; tell clients to refetch. Loot changes invalidate "happy with my picks".
       const lootChanged = url.searchParams.get('loot') === '1';
       await this.save({ revision: this.state.revision + 1, ...(lootChanged ? { lockedIn: [] } : {}) });
       return new Response('ok');
+    }
+
+    if (url.pathname === '/detail') {
+      // Session detail as of the current revision: rebuilt from D1 once per revision, not once per browser.
+      const entry = await this.cached('detail', async (revision) => {
+        const detail = await getSessionDetail(this.env.DB, this.sessionId);
+        return detail && { ...detail, revision };
+      });
+      return entry ? new Response(entry.json, { headers: { 'content-type': 'application/json' } }) : new Response('not found', { status: 404 });
+    }
+
+    if (url.pathname === '/rolls') {
+      const entry = await this.cached('rolls', () => getSessionRolls(this.env.DB, this.sessionId));
+      return new Response(entry?.json ?? '{}', { headers: { 'content-type': 'application/json' } });
     }
 
     if (url.pathname === '/lock-in') {
@@ -119,6 +166,7 @@ export class SessionDO extends DurableObject<Env> {
       await this.ctx.storage.deleteAlarm();
       await this.ctx.storage.deleteAll();
       this.state = initialState();
+      this.cache.clear();
       for (const ws of this.ctx.getWebSockets()) {
         try {
           ws.close(1000, 'session deleted');
@@ -374,8 +422,7 @@ export class SessionDO extends DurableObject<Env> {
 
   private async choose(raiderId: number, tier: Tier | null) {
     if (tier) {
-      const raiders = await getSessionRaiders(this.env.DB, this.sessionId);
-      const me = raiders.find((r) => r.id === raiderId);
+      const me = await getSessionRaider(this.env.DB, this.sessionId, raiderId);
       if (!me) throw new Error('You are not in this session');
       if (tier === 'need' && me.need_remaining <= 0) throw new Error('No Need charges left this session');
       if (tier === 'dibs' && !canDibs(me)) {
@@ -383,7 +430,7 @@ export class SessionDO extends DurableObject<Env> {
       }
       if (tier !== 'pass') {
         const itemId = this.state.itemIds[this.state.currentIndex];
-        if (itemId != null && (await getRaidersWhoWonCopy(this.env.DB, itemId)).has(raiderId)) {
+        if (itemId != null && (await hasRaiderWonCopy(this.env.DB, itemId, raiderId))) {
           throw new Error("You already won this item this session — you're auto-passed on this copy");
         }
       }
@@ -531,10 +578,39 @@ export class SessionDO extends DurableObject<Env> {
     return { deadline: null, paused: true, pausedRemainingMs: remainingMs };
   }
 
-  private async save(patch: Partial<LiveState>) {
+  private async save(patch: Partial<LiveState>, audience: 'all' | 'admin' = 'all') {
+    // A revision bump announces a D1 change: every cached D1 view is stale from here on.
+    if (patch.revision !== undefined && patch.revision !== this.state.revision) this.cache.clear();
     this.state = { ...this.state, ...patch };
     await this.ctx.storage.put('state', this.state);
-    this.broadcastState();
+    this.broadcastState(audience);
+  }
+
+  /**
+   * Read-through cache keyed on the live revision. An entry is tagged with the revision seen
+   * BEFORE its D1 read, so a write that lands mid-read (and bumps the revision) can never be
+   * masked: the entry is simply not stored, and a client comparing revisions refetches. Concurrent
+   * misses share one D1 read; invalidation clears entries but never the in-flight promise.
+   */
+  private cached<T>(key: string, loader: (revision: number) => Promise<T | null>): Promise<CacheEntry<T> | null> {
+    const hit = this.cache.get(key) as CacheEntry<T> | undefined;
+    if (hit && hit.revision === this.state.revision && Date.now() - hit.fetchedAt < CACHE_TTL_MS) return Promise.resolve(hit);
+    let p = this.inflight.get(key) as Promise<CacheEntry<T> | null> | undefined;
+    if (!p) {
+      const revision = this.state.revision;
+      p = loader(revision)
+        .then((data) => {
+          if (data == null) return null;
+          const entry: CacheEntry<T> = { data, json: JSON.stringify(data), revision, fetchedAt: Date.now() };
+          if (this.state.revision === revision) this.cache.set(key, entry);
+          return entry;
+        })
+        .finally(() => {
+          if (this.inflight.get(key) === p) this.inflight.delete(key);
+        });
+      this.inflight.set(key, p);
+    }
+    return p;
   }
 
   /**
@@ -567,9 +643,10 @@ export class SessionDO extends DurableObject<Env> {
     };
   }
 
-  private broadcastState() {
+  private broadcastState(audience: 'all' | 'admin' = 'all') {
     for (const ws of this.ctx.getWebSockets()) {
       const att = ws.deserializeAttachment() as Attachment;
+      if (audience === 'admin' && !att.admin) continue;
       this.sendTo(ws, { type: 'state', state: this.viewFor(att) });
     }
   }

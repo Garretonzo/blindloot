@@ -73,3 +73,11 @@ export async function resetSessionLive(env: Env, sessionId: number, phase: 'open
 export async function notifySession(env: Env, sessionId: number, lootChanged = false) {
   await sessionStub(env, sessionId).fetch(`https://do/notify?sessionId=${sessionId}${lootChanged ? '&loot=1' : ''}`);
 }
+
+/**
+ * A raider changed a pre-pick. Pre-picks are private, so this only nudges the admin page's
+ * preview — it never makes the other raiders' pages refetch (that fan-out is what blew the D1 budget).
+ */
+export async function notifyPlansChanged(env: Env, sessionId: number) {
+  await sessionStub(env, sessionId).fetch(`https://do/notify?sessionId=${sessionId}&plans=1`);
+}

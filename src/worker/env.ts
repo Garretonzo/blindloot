@@ -7,6 +7,8 @@ export interface Env {
   SUPER_ADMIN_PASSWORD?: string;
   /** Password everyone must enter before using the site. Unset = no gate. */
   SITE_PASSWORD?: string;
+  /** Dev-only (.dev.vars): log D1 rows_read per request and per DO query. See d1-meter.ts. */
+  D1_METER?: string;
 }
 
 /** Hono environment shared by every router, so contexts are interchangeable across helpers. */

@@ -1,12 +1,13 @@
 import { Alert, Badge, Button, Group, NumberInput, Stack, Text, Title } from '@mantine/core';
 import { SectionCard } from '../components/SectionCard';
 import { notifications } from '@mantine/notifications';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, Identity } from '../api';
 import { useIdentity } from '../identity';
 import { SessionDetail, Tier } from '../../shared/types';
 import { useSessionSocket } from '../useSessionSocket';
+import { useRevisionedFetch } from '../useRevisionedFetch';
 import { ItemList } from '../components/ItemList';
 import { RaiderTable } from '../components/RaiderTable';
 import { RollPanel } from '../components/RollPanel';
@@ -20,18 +21,24 @@ export function SessionPage() {
   const { identity } = useIdentity();
   const [plans, setPlans] = useState<Record<number, Tier>>({});
   const me = detail?.raiders.find((r) => r.id === identity?.raiderId) ?? null;
-  const { state: live, connected, send } = useSessionSocket(sessionId, me?.id ?? null, identity?.token ?? null);
+  const { state: live, connected, send } = useSessionSocket(sessionId, identity?.token ?? null);
 
-  // Sequence refreshes so a slow earlier response can't overwrite a newer one
-  // (that race used to blank out the viewer's own Dibs/Need counts).
-  const seq = useRef(0);
-  const refresh = useCallback(() => {
-    const n = ++seq.current;
-    api.session(sessionId).then((d) => { if (seq.current === n) setDetail(d); }).catch(() => {});
-    if (identity) api.plans(sessionId).then((p) => { if (seq.current === n) setPlans(p); }).catch(() => {});
-  }, [sessionId, identity]);
+  // Detail is refetched only when the socket announces a revision we don't hold (one request per
+  // change, never per pre-pick). The sanitized view is per viewer, hence the raiderId dependency.
+  const raiderId = identity?.raiderId ?? null;
+  const loadDetail = useCallback(async () => {
+    const d = await api.session(sessionId);
+    setDetail(d);
+    return d.revision ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, raiderId]);
+  const refetch = useRevisionedFetch(loadDetail, live?.revision);
 
-  useEffect(refresh, [refresh, live?.revision]);
+  // The viewer's own pre-picks only change through this page's clicks: loaded once per viewer.
+  useEffect(() => {
+    if (raiderId == null) return setPlans({});
+    api.plans(sessionId).then(setPlans).catch(() => {});
+  }, [sessionId, raiderId]);
 
   const setPlan = async (itemId: number, tier: Tier | null) => {
     if (!identity) return;
@@ -104,7 +111,7 @@ export function SessionPage() {
       </Group>
 
       {!me && identity && detail.session.status === 'open' && (
-        <JoinForm sessionId={sessionId} seasonId={detail.season.id} me={identity} onJoined={refresh} />
+        <JoinForm sessionId={sessionId} seasonId={detail.season.id} me={identity} onJoined={() => refetch(true)} />
       )}
       {!me && detail.session.status !== 'open' && (
         <Text size="sm" c="dimmed">
